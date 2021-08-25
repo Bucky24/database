@@ -1,0 +1,26 @@
+{
+    "name": "@bucky24/database",
+    "version": "0.1.0",
+    "description": "A simple model system for node that allows connecting to multiple types of data source",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+    "type": "git",
+        "url": "git+https://github.com/Bucky24/database.git"
+    },
+    "keywords": [
+        "database"
+    ],
+    "files": [
+        "index.js",
+        "src"
+    ],
+    "author": "Bucky24",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/Bucky24/database/issues"
+    },
+    "homepage": "https://github.com/Bucky24/database#readme"
+}
