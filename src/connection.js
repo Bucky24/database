@@ -23,7 +23,7 @@ class Connection {
         
         if (type === CONNECTION_TYPE.FILE) {
             if (!fs.existsSync(this.data.cacheDir)) {
-                fs.mkdirSync(this.data.cacheDir, "{}");
+                fs.mkdirSync(this.data.cacheDir);
             }
             this.connection = this.data.cacheDir;
         } else if (type === CONNECTION_TYPE.MYSQL) {

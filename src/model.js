@@ -36,7 +36,7 @@ class Model {
             throw new Error('getCacheFile called with invalid connection type: ' + connection.getType());
         }
         
-        const filePath = path.join(connection.getConnection() . `${this.table}.json`);
+        const filePath = path.join(connection.getConnection(), `${this.table}.json`);
         
         return filePath;
     }
@@ -69,9 +69,13 @@ class Model {
     initTable() {
         const connection = Connection.getDefaultConnection();
         
+        if (connection === null) {
+            throw new Error('No default connection set');
+        }
+        
         if (connection.getType() === Connection.CONNECTION_TYPE.MYSQL) {
             throw new Error("MySQL support not coded yet");
-        } else {
+        } else if (connection.getType() === Connection.CONNECTION_TYPE.FILE) {
             const path = this.getCacheFile();
             if (!fs.existsSync(path)) {
                 writeCacheFile({
@@ -79,6 +83,8 @@ class Model {
                     data: [],
                 });
             }
+        } else {
+            throw new Error(`Unexpected connection type ${connection.getType()}`);
         }
     }
     
@@ -95,6 +101,10 @@ class Model {
     
     get(id) {
         const connection = Connection.getDefaultConnection();
+        
+        if (connection === null) {
+            throw new Error('No default connection set');
+        }
         
         if (connection.getType() === Connection.CONNECTION_TYPE.MYSQL) {
             throw new Error("MySQL support not coded yet");
@@ -115,6 +125,10 @@ class Model {
     
     search(query) {
         const connection = Connection.getDefaultConnection();
+        
+        if (connection === null) {
+            throw new Error('No default connection set');
+        }
         
         const keys = Object.keys(query);
         for (let i=0;i<keys.length;i++) {
@@ -154,6 +168,10 @@ class Model {
     
     update(id, fields) {
         const connection = Connection.getDefaultConnection();
+        
+        if (connection === null) {
+            throw new Error('No default connection set');
+        }
         
         const keys = Object.keys(fields);
         for (let i=0;i<keys.length;i++) {
@@ -195,6 +213,12 @@ class Model {
     }
     
     insert(insertData) {
+        const connection = Connection.getDefaultConnection();
+        
+        if (connection === null) {
+            throw new Error('No default connection set');
+        }
+
         const keys = Object.keys(insertData);
         for (let i=0;i<keys.length;i++) {
             const key = keys[0];
@@ -245,3 +269,9 @@ class Model {
         }
     }
 }
+
+module.exports = {
+    Model,
+    FIELD_TYPE,
+    FIELD_META,
+};
