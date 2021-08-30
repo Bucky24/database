@@ -55,9 +55,10 @@ Connection.mysqlConnection = ({ host, username, password, database }) => {
     });
 }
 
+Connection.setDefaultConnection = setDefaultConnection;
+Connection.getDefaultConnection = getDefaultConnection;
+
 module.exports = {
     Connection,
-    setDefaultConnection,
-    getDefaultConnection,
     CONNECTION_TYPE,
 }

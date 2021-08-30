@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 
-const Connection = require('./connection');
+const { Connection, CONNECTION_TYPE } = require('./connection');
 
 const FIELD_TYPE = {
     INT: 'type/int',
@@ -32,7 +32,7 @@ class Model {
     getCacheFile() {
         const connection = Connection.getDefaultConnection();
         
-        if (connection.getType() !== Connection.CONNECTION_TYPE.FILE) {
+        if (connection.getType() !== CONNECTION_TYPE.FILE) {
             throw new Error('getCacheFile called with invalid connection type: ' + connection.getType());
         }
         
@@ -44,7 +44,7 @@ class Model {
     writeCacheFile(data) {
         const connection = Connection.getDefaultConnection();
         
-        if (connection.getType() !== Connection.CONNECTION_TYPE.FILE) {
+        if (connection.getType() !== CONNECTION_TYPE.FILE) {
             throw new Error('writeCacheFile called with invalid connection type: ' + connection.getType());
         }
         
@@ -56,7 +56,7 @@ class Model {
     readCacheFile() {
         const connection = Connection.getDefaultConnection();
         
-        if (connection.getType() !== Connection.CONNECTION_TYPE.FILE) {
+        if (connection.getType() !== CONNECTION_TYPE.FILE) {
             throw new Error('readCacheFile called with invalid connection type: ' + connection.getType());
         }
         
@@ -73,9 +73,9 @@ class Model {
             throw new Error('No default connection set');
         }
         
-        if (connection.getType() === Connection.CONNECTION_TYPE.MYSQL) {
+        if (connection.getType() === CONNECTION_TYPE.MYSQL) {
             throw new Error("MySQL support not coded yet");
-        } else if (connection.getType() === Connection.CONNECTION_TYPE.FILE) {
+        } else if (connection.getType() === CONNECTION_TYPE.FILE) {
             const path = this.getCacheFile();
             if (!fs.existsSync(path)) {
                 this.writeCacheFile({
@@ -106,9 +106,9 @@ class Model {
             throw new Error('No default connection set');
         }
         
-        if (connection.getType() === Connection.CONNECTION_TYPE.MYSQL) {
+        if (connection.getType() === CONNECTION_TYPE.MYSQL) {
             throw new Error("MySQL support not coded yet");
-        } else if (connection.getType() === Connection.CONNECTION_TYPE.FILE) {
+        } else if (connection.getType() === CONNECTION_TYPE.FILE) {
             const data = this.readCacheFile();
             for (let i=0;i<data.data.length;i++) {
                 const obj = data.data[i];
@@ -139,9 +139,9 @@ class Model {
             }
         }
         
-        if (connection.getType() === Connection.CONNECTION_TYPE.MYSQL) {
+        if (connection.getType() === CONNECTION_TYPE.MYSQL) {
             throw new Error("MySQL support not coded yet");
-        } else if (connection.getType() === Connection.CONNECTION_TYPE.FILE) {
+        } else if (connection.getType() === CONNECTION_TYPE.FILE) {
             const data = this.readCacheFile();
             const results = [];
             for (let i=0;i<data.data.length;i++) {
@@ -191,9 +191,9 @@ class Model {
             }
         }
         
-        if (connection.getType() === Connection.CONNECTION_TYPE.MYSQL) {
+        if (connection.getType() === CONNECTION_TYPE.MYSQL) {
             throw new Error("MySQL support not coded yet");
-        } else if (connection.getType() === Connection.CONNECTION_TYPE.FILE) {
+        } else if (connection.getType() === CONNECTION_TYPE.FILE) {
             const data = this.readCacheFile();
             const results = [];
             for (let i=0;i<data.data.length;i++) {
@@ -242,12 +242,13 @@ class Model {
             }
         }
         
-        if (connection.getType() === Connection.CONNECTION_TYPE.MYSQL) {
+        if (connection.getType() === CONNECTION_TYPE.MYSQL) {
             throw new Error("MySQL support not coded yet");
-        } else if (connection.getType() === Connection.CONNECTION_TYPE.FILE) {
+        } else if (connection.getType() === CONNECTION_TYPE.FILE) {
             const data = this.readCacheFile();
             
             let newObj = {};
+            let autoData = {};
             
             for (let i=0;i<tableFields.length;i++) {
                 const tableField = tableFields[i];
@@ -257,6 +258,7 @@ class Model {
                         data.auto[tableField] = 1;
                     }
                     newObj[tableField] = data.auto[tableField];
+                    autoData[tableField] = newObj[tableField];
                     data.auto[tableField] += 1;
                 }
             }
@@ -269,6 +271,8 @@ class Model {
             data.data.push(newObj);
             
             this.writeCacheFile(data);
+            
+            return autoData.id;
         } else {
             throw new Error(`Unexpected connection type ${connection.getType()}`);
         }

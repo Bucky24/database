@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 const { Model, FIELD_META } = require('../src/model');
-const { Connection, setDefaultConnection } = require('../src/connection');
+const { Connection } = require('../src/connection');
 
 const cachePath = path.join(__dirname, 'cache_dir');
 
@@ -22,7 +22,7 @@ const assertThrows = async (fn, message) => {
 describe('model', () => {    
     describe('setup', () => {
         it('should error when no default connection set', async () => {
-            setDefaultConnection(null);
+            Connection.setDefaultConnection(null);
             await assertThrows(() => {
                 const model = new Model('table', [], 1);
             }, "No default connection set");
@@ -30,7 +30,7 @@ describe('model', () => {
         
         it('should error when default connection is unknown type', async () => {
             const connection = new Connection('bad_type', {});
-            setDefaultConnection(connection);
+            Connection.setDefaultConnection(connection);
             await assertThrows(() => {
                 const model = new Model('table', [], 1);
             }, "Unexpected connection type bad_type");
@@ -42,11 +42,11 @@ describe('model', () => {
 
         beforeEach(() => {
             const connection = Connection.fileConnection(cachePath);
-            setDefaultConnection(connection);
+            Connection.setDefaultConnection(connection);
         });
     
         afterEach(() => {
-            setDefaultConnection(null);
+            Connection.setDefaultConnection(null);
             fs.rmdirSync(cachePath, { recursive: true });
         });
 
@@ -62,11 +62,11 @@ describe('model', () => {
 
             beforeEach(() => {
                 const connection = Connection.fileConnection(cachePath);
-                setDefaultConnection(connection);
+                Connection.setDefaultConnection(connection);
             });
             
             afterEach(() => {
-                setDefaultConnection(null);
+                Connection.setDefaultConnection(null);
                 fs.rmdirSync(cachePath, { recursive: true });
             });
 
@@ -96,11 +96,11 @@ describe('model', () => {
 
             beforeEach(() => {
                 const connection = Connection.fileConnection(cachePath);
-                setDefaultConnection(connection);
+                Connection.setDefaultConnection(connection);
             });
             
             afterEach(() => {
-                setDefaultConnection(null);
+                Connection.setDefaultConnection(null);
                 fs.rmdirSync(cachePath, { recursive: true });
             });
 
@@ -111,16 +111,16 @@ describe('model', () => {
                     },
                     bar: {},
                 });
-                await model.insert({
+                const id = await model.insert({
                     foo: 'bar',
                     bar: 'foo',
                 });
                 const content = fs.readFileSync(filePath, 'utf8');
                 const json = JSON.parse(content);
                 assert.deepStrictEqual(json, {
-                    auto: { id: 2 },
+                    auto: { id: id + 1 },
                     data: [{
-                        id: 1,
+                        id,
                         foo: 'bar',
                         bar: 'foo',
                     }],
@@ -135,11 +135,11 @@ describe('model', () => {
 
             beforeEach(() => {
                 const connection = Connection.fileConnection(cachePath);
-                setDefaultConnection(connection);
+                Connection.setDefaultConnection(connection);
             });
             
             afterEach(() => {
-                setDefaultConnection(null);
+                Connection.setDefaultConnection(null);
                 fs.rmdirSync(cachePath, { recursive: true });
             });
             
@@ -169,11 +169,11 @@ describe('model', () => {
 
             beforeEach(() => {
                 const connection = Connection.fileConnection(cachePath);
-                setDefaultConnection(connection);
+                Connection.setDefaultConnection(connection);
             });
             
             afterEach(() => {
-                setDefaultConnection(null);
+                Connection.setDefaultConnection(null);
                 fs.rmdirSync(cachePath, { recursive: true });
             });
            
@@ -235,7 +235,7 @@ describe('model', () => {
 
             beforeEach(async () => {
                 const connection = Connection.fileConnection(cachePath);
-                setDefaultConnection(connection);
+                Connection.setDefaultConnection(connection);
                 model = new Model("table", {
                     foo: {
                         meta: [FIELD_META.REQUIRED],
@@ -250,7 +250,7 @@ describe('model', () => {
             });
             
             afterEach(() => {
-                setDefaultConnection(null);
+                Connection.setDefaultConnection(null);
                 fs.rmdirSync(cachePath, { recursive: true });
             });
             
@@ -287,7 +287,7 @@ describe('model', () => {
 
             beforeEach(async () => {
                 const connection = Connection.fileConnection(cachePath);
-                setDefaultConnection(connection);
+                Connection.setDefaultConnection(connection);
                 model = new Model("table", {
                     foo: {
                         meta: [FIELD_META.REQUIRED],
@@ -302,7 +302,7 @@ describe('model', () => {
             });
             
             afterEach(() => {
-                setDefaultConnection(null);
+                Connection.setDefaultConnection(null);
                 fs.rmdirSync(cachePath, { recursive: true });
             });
             
