@@ -150,6 +150,11 @@ class Model {
                 Object.keys(query).forEach((key) => {
                     const value = query[key];
                     
+                    if (obj[key] === undefined && value === null) {
+                        // null is valid for unset, so return at this point
+                        return;
+                    }
+                    
                     if (obj[key] !== value) {
                         failed = true;
                     }
