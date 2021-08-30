@@ -50,7 +50,7 @@ class Model {
         
         const path = this.getCacheFile();
         
-        fs.writeSync(path, JSON.stringify(data, null, 4));
+        fs.writeFileSync(path, JSON.stringify(data, null, 4));
     }
     
     readCacheFile() {
@@ -62,7 +62,7 @@ class Model {
         
         const path = this.getCacheFile();
         
-        const data = fs.readSync(path, 'utc-8');
+        const data = fs.readFileSync(path, 'utf8');
         return JSON.parse(data);
     }
     
@@ -78,7 +78,7 @@ class Model {
         } else if (connection.getType() === Connection.CONNECTION_TYPE.FILE) {
             const path = this.getCacheFile();
             if (!fs.existsSync(path)) {
-                writeCacheFile({
+                this.writeCacheFile({
                     auto: {},
                     data: [],
                 });
@@ -99,7 +99,7 @@ class Model {
         }
     }
     
-    get(id) {
+    async get(id) {
         const connection = Connection.getDefaultConnection();
         
         if (connection === null) {
@@ -123,7 +123,7 @@ class Model {
         }
     }
     
-    search(query) {
+    async search(query) {
         const connection = Connection.getDefaultConnection();
         
         if (connection === null) {
@@ -166,7 +166,7 @@ class Model {
         }
     }
     
-    update(id, fields) {
+    async update(id, fields) {
         const connection = Connection.getDefaultConnection();
         
         if (connection === null) {
@@ -212,7 +212,7 @@ class Model {
         }
     }
     
-    insert(insertData) {
+    async insert(insertData) {
         const connection = Connection.getDefaultConnection();
         
         if (connection === null) {
@@ -230,7 +230,7 @@ class Model {
         
         const tableFields = Object.keys(this.fields);
         for (let i=0;i<tableFields.length;i++) {
-            const key = tableFields[0];
+            const key = tableFields[i];
             const fieldData = this.getFieldData(key);
             if (fieldData.meta.includes(FIELD_META.REQUIRED) && !insertData[key]) {
                 throw new Error(`Required field '${key}' not found`);
