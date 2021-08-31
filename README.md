@@ -148,3 +148,17 @@ await tableModel.update(obj_id, {
     field1: 5,
 });
 ```
+
+### delete
+
+The delete method takes in an id and removes it if it exists.
+
+| Param | Type | Description |
+|---|---|---|
+| id | Integer | The ID of the object to remove. Required |
+
+Example:
+
+```
+await tableModel.remove(obj_id);
+```

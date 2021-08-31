@@ -277,6 +277,32 @@ class Model {
             throw new Error(`Unexpected connection type ${connection.getType()}`);
         }
     }
+    
+    async delete(id) {
+        const connection = Connection.getDefaultConnection();
+        
+        if (connection === null) {
+            throw new Error('No default connection set');
+        }
+        
+        if (connection.getType() === CONNECTION_TYPE.MYSQL) {
+            throw new Error("MySQL support not coded yet");
+        } else if (connection.getType() === CONNECTION_TYPE.FILE) {
+            const data = this.readCacheFile();
+            const results = [];
+            for (let i=0;i<data.data.length;i++) {
+                const obj = data.data[i];
+                if (obj.id === id) {
+                    data.data.splice(i, 1);
+                    break;
+                }
+            }
+            
+            this.writeCacheFile(data);
+        } else {
+            throw new Error(`Unexpected connection type ${connection.getType()}`);
+        }
+    }
 }
 
 module.exports = {

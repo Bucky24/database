@@ -339,5 +339,67 @@ describe('model', () => {
                 });
             });
         });
-    })
+    });
+    
+    describe('delete', () => {
+        describe('FILE', () => {
+            const filePath = path.join(cachePath, "table.json");
+            let model;
+            let id1;
+            let id2;
+
+            beforeEach(async () => {
+                const connection = Connection.fileConnection(cachePath);
+                Connection.setDefaultConnection(connection);
+                model = new Model("table", {
+                    foo: {
+                        meta: [FIELD_META.REQUIRED],
+                    },
+                    bar: {},
+                });
+                
+                id1 = await model.insert({
+                    foo: 'bar',
+                    bar: 'baz',
+                });
+                id2 = await model.insert({
+                    foo: 'foo',
+                    bar: 'bar',
+                });
+            });
+            
+            afterEach(() => {
+                Connection.setDefaultConnection(null);
+                fs.rmdirSync(cachePath, { recursive: true });
+            });
+            
+            it('should remove row as expected', async () => {
+                await model.delete(id1);
+                let data = await model.get(id1);
+                assert(data === null);
+                data = await model.get(id2);
+                assert.deepStrictEqual(data, {
+                    id: id2,
+                    foo: 'foo',
+                    bar: 'bar',
+                });
+            });
+            
+            it('should do nothing if non existent id given', async () => {
+                await model.delete(5000);
+                let data = await model.get(id1);
+                assert.deepStrictEqual(data, {
+                    id: id1,
+                    foo: 'bar',
+                    bar: 'baz',
+                });
+                data = await model.get(id2);
+                assert.deepStrictEqual(data, {
+                    id: id2,
+                    foo: 'foo',
+                    bar: 'bar',
+                });
+            });
+        });
+    });
 });

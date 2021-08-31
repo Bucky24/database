@@ -24,4 +24,5 @@ const model = new Model("example_table", {
     const item2 = await model.search({ field1: 'text' });
     
     await model.update(id, { field2: 'additional text', field1: null });
+    await model.delete(id);
 })();
