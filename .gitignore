@@ -1,2 +1,3 @@
 test/cache_dir
 node_modules
+examples/*/cache

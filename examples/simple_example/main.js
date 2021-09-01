@@ -1,8 +1,9 @@
 const path = require('path');
-const { Model, FIELD_META, FIELD_TYPE, Connection, setDefaultConnection } = require('../../index.js');
+const { Model, FIELD_META, FIELD_TYPE, Connection } = require('../../index.js');
 
 const cacheDir = path.join(__dirname, 'cache');
 const connection = Connection.fileConnection(cacheDir);
+Connection.setDefaultConnection(connection);
 
 const model = new Model("example_table", {
     "field1": {
@@ -22,6 +23,9 @@ const model = new Model("example_table", {
     
     const item1 = await model.get(id);
     const item2 = await model.search({ field1: 'text' });
+
+    console.log(item1);
+    console.log(item2);
     
     await model.update(id, { field2: 'additional text', field1: null });
     await model.delete(id);
