@@ -36,7 +36,7 @@ Creates a connection that represents a connection to a mysql database
 Example:
 
 ```
-const connection = Connection.fileConnection({
+const connection = Connection.mysqlConnection({
     host: 'localhost',
     username: 'user',
     password: 'secretpassword',
@@ -46,7 +46,7 @@ const connection = Connection.fileConnection({
 
 ### Connection.setDefaultConnection
 
-This method takes in a Connection and sets it as the default connection for models to use going forward. Note that this affects previously create models as well.
+This method takes in a Connection and sets it as the default connection for all models to use going forward. Note that this affects previously created models as well.
 
 | Param | Type | Description |
 |---|---|---|
@@ -78,10 +78,13 @@ Allows creating a new Model for use in your program. It's recommended that you c
 
 | Param | Type | Description |
 |---|---|---|
-| tableName | String | Name of the table we're connecting to |
+| tableName | String | Name of the table to manipulate |
 | fields | Object | Keys being the name of the field, and values being a Field object |
-| version | Integer | Version of the table structure. Unused |
+| version | Integer | Version of the table structure. Unused currently, though it is stored in a versions table in the database |
 
+Note that the Model will automatically add an "id" field with type of FIELD_TYPE.INT that is a required auto-increment field. You can override this field if you desire.
+
+Also note that you must call `initTable` on the new Model and wait for it to finish before you can use the model. This ensures that all tables exist in the chosen data system.
 #### Field
 
 A Field is an object with the following parameters:
@@ -102,10 +105,23 @@ const tableModel = new Model("sample_table", {
 }, 1);
 ```
 
-Note that the Model will automatically add an "id" field with type of FIELD_TYPE.INT that is a required auto-increment field. You can override this field if you desire.
+#### FIELD_TYPE
 
-Also note that you must call `initTable` on the new Model and wait for it to finish before you can use the model. This ensures that all tables exist in the chosen data system.
+The values of FIELD_TYPE are:
 
+| Name | Description |
+|---|---|
+| INT | Integer value |
+| STRING | Open length text value |
+
+#### FIELD_META
+
+The values of FIELD_META are:
+
+| Name | Description |
+|---|---|
+| AUTO | Indicates this field is an auto-increment field. There should only be one of these. |
+| REQUIRED | Indicates the given field is required (inserts that do not contain this field will fail and updates that set it to null will fail) |
 ### initTable
 
 The `initTable` method performs the work to setup the table with given fields in your chosen database. It returns a promise that must resolve before any other methods are safe to call.
