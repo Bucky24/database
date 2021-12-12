@@ -1,5 +1,5 @@
 const fs = require('fs');
-const mysql = require('mysql');
+const mysql = require('mysql2');
 
 const CONNECTION_TYPE = {
     MYSQL: 'connection/mysql',
@@ -17,9 +17,10 @@ function getDefaultConnection() {
 }
 
 class Connection {
-    constructor(type, data) {
+    constructor(type, data, prefix = null) {
         this.type = type;
         this.data = data;
+        this.prefix = prefix;
         
         if (type === CONNECTION_TYPE.FILE) {
             if (!fs.existsSync(this.data.cacheDir)) {
@@ -43,6 +44,19 @@ class Connection {
     getConnection() {
         return this.connection;
     }
+
+    getTable(table) {
+        if (!this.prefix) {
+            return table;
+        }
+        return `${this.prefix}_${table}`;
+    }
+
+    close() {
+        if (this.type === CONNECTION_TYPE.MYSQL) {
+            this.getConnection().close();
+        }
+    }
 }
 
 Connection.fileConnection = (cacheDir) => {
@@ -51,7 +65,7 @@ Connection.fileConnection = (cacheDir) => {
 
 Connection.mysqlConnection = ({ host, username, password, database }) => {
     return new Connection(CONNECTION_TYPE.MYSQL, {
-        host, username, password, database,
+        host, user: username, password, database,
     });
 }
 

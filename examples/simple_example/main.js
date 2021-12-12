@@ -16,6 +16,7 @@ const model = new Model("example_table", {
 });
 
 (async () => {
+    await model.initTable();
     const id = await model.insert({
         field1: 'text',
         field2: 'other text',

@@ -9,7 +9,7 @@ There are two steps to using the module. The first is to setup a connection, and
 
 ## Connection
 
-Currently only file connections are supported. While you can create a Connection directly, it's recommended to call one of the helper methods.
+Currently only file connections and mysql connections are supported. While you can create a Connection directly, it's recommended to call one of the helper methods.
 
 ### Connection.fileConnection
 
@@ -23,6 +23,25 @@ Example:
 
 ```
 const connection = Connection.fileConnection(path.join(__dirname, "cache"));
+```
+
+### Connection.mysqlConnection
+
+Creates a connection that represents a connection to a mysql database
+
+| Param | Type | Description |
+|---|---|---|
+| connectionObject | Object | An object containing the following keys: "password", "username", "host", "database" |
+
+Example:
+
+```
+const connection = Connection.fileConnection({
+    host: 'localhost',
+    username: 'user',
+    password: 'secretpassword',
+    database: 'app_database',
+});
 ```
 
 ### Connection.setDefaultConnection
@@ -85,7 +104,11 @@ const tableModel = new Model("sample_table", {
 
 Note that the Model will automatically add an "id" field with type of FIELD_TYPE.INT that is a required auto-increment field. You can override this field if you desire.
 
+Also note that you must call `initTable` on the new Model and wait for it to finish before you can use the model. This ensures that all tables exist in the chosen data system.
 
+### initTable
+
+The `initTable` method performs the work to setup the table with given fields in your chosen database. It returns a promise that must resolve before any other methods are safe to call.
 ### get
 
 The get method takes in an ID and returns the data object associated with that ID (if it exists).

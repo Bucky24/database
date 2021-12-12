@@ -1,3 +1,4 @@
 test/cache_dir
 node_modules
 examples/*/cache
+test/db.json

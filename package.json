@@ -1,6 +1,6 @@
 {
     "name": "@bucky24/database",
-    "version": "0.1.1",
+    "version": "1.0.0",
     "description": "A simple model system for node that allows connecting to multiple types of data source",
     "main": "index.js",
     "scripts": {
@@ -28,6 +28,6 @@
         "mocha": "^9.1.0"
     },
     "dependencies": {
-        "mysql": "^2.18.1"
+        "mysql2": "^2.3.3"
     }
 }

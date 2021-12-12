@@ -23,16 +23,18 @@ describe('model', () => {
     describe('setup', () => {
         it('should error when no default connection set', async () => {
             Connection.setDefaultConnection(null);
-            await assertThrows(() => {
+            await assertThrows(async () => {
                 const model = new Model('table', [], 1);
+                await model.initTable();
             }, "No default connection set");
         });
         
         it('should error when default connection is unknown type', async () => {
             const connection = new Connection('bad_type', {});
             Connection.setDefaultConnection(connection);
-            await assertThrows(() => {
+            await assertThrows(async () => {
                 const model = new Model('table', [], 1);
+                await model.initTable();
             }, "Unexpected connection type bad_type");
         });
     });
@@ -50,8 +52,9 @@ describe('model', () => {
             fs.rmdirSync(cachePath, { recursive: true });
         });
 
-        it('should create expected cache file', () => {
+        it('should create expected cache file', async () => {
             const model = new Model("table", {});
+            await model.initTable();
             assert(fs.existsSync(filePath));
         });
     });
@@ -72,6 +75,7 @@ describe('model', () => {
 
             it('should prevent inserting a non existent field', async () => {
                 const model = new Model("table", {});
+                await model.initTable();
                 await assertThrows(async () => {
                     await model.insert({
                         foo: 'bar',
@@ -85,6 +89,7 @@ describe('model', () => {
                         meta: [FIELD_META.REQUIRED],
                     },
                 });
+                await model.initTable();
                 await assertThrows(async () => {
                     await model.insert({});
                 }, "Required field 'foo' not found");
@@ -111,6 +116,7 @@ describe('model', () => {
                     },
                     bar: {},
                 });
+                await model.initTable();
                 const id = await model.insert({
                     foo: 'bar',
                     bar: 'foo',
@@ -150,6 +156,7 @@ describe('model', () => {
                     },
                     bar: {},
                 });
+                await model.initTable();
                 await model.insert({
                     foo: 'bar',
                 });
@@ -184,6 +191,7 @@ describe('model', () => {
                     },
                     bar: {},
                 });
+                await model.initTable();
                 await model.insert({
                     foo: 'bar',
                     bar: 'baz',
@@ -209,6 +217,7 @@ describe('model', () => {
                     },
                     bar: {},
                 });
+                await model.initTable();
                 await model.insert({
                     foo: 'bar',
                     bar: 'baz',
@@ -242,6 +251,7 @@ describe('model', () => {
                     },
                     bar: {},
                 });
+                await model.initTable();
                 
                 await model.insert({
                     foo: 'bar',
@@ -294,6 +304,7 @@ describe('model', () => {
                     },
                     bar: {},
                 });
+                await model.initTable();
                 
                 await model.insert({
                     foo: 'bar',
@@ -357,6 +368,7 @@ describe('model', () => {
                     },
                     bar: {},
                 });
+                await model.initTable();
                 
                 id1 = await model.insert({
                     foo: 'bar',

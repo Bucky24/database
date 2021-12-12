@@ -26,7 +26,6 @@ class Model {
             ...fields,
         };
         this.version = version;
-        this.initTable();
     }
     
     getCacheFile() {
@@ -65,8 +64,48 @@ class Model {
         const data = fs.readFileSync(path, 'utf8');
         return JSON.parse(data);
     }
+
+    static async query(query, bind) {
+        const connection = Connection.getDefaultConnection();
+        
+        if (connection === null) {
+            throw new Error('No default connection set');
+        }
+
+        return new Promise((resolve, reject) => {
+            const callback = (error, results, fields) => {
+                if (error) {
+                    reject(error);
+                    return;
+                }
+
+                resolve(results);
+            };
+            if (bind) {
+                connection.getConnection().execute(query, bind, callback);
+            } else {
+                connection.getConnection().query(query, callback);
+            }
+        });
+    }
+
+    static _getColumnFromType(type) {
+        if (type === FIELD_TYPE.INT) {
+            return 'INT';
+        } else if (type === FIELD_TYPE.STRING) {
+            return 'TEXT';
+        }
+    }
+
+    static _getValueForType(type, value) {
+        if (type === FIELD_TYPE.STRING) {
+            return `"${value}"`;
+        }
+
+        return value;
+    }
     
-    initTable() {
+    async initTable() {
         const connection = Connection.getDefaultConnection();
         
         if (connection === null) {
@@ -74,7 +113,55 @@ class Model {
         }
         
         if (connection.getType() === CONNECTION_TYPE.MYSQL) {
-            throw new Error("MySQL support not coded yet");
+            // first see if our versions table exists
+            const getVersionsQuery = "SELECT * FROM information_schema.tables WHERE table_schema = '" + connection.getData()['database'] + "' AND table_name = '" + connection.getTable('table_versions') + "' LIMIT 1;"
+
+            const tableResult = await Model.query(getVersionsQuery);
+
+            if (tableResult.length === 0) {
+                console.log("Versions table not found, creating!");
+
+                const creationQuery = "CREATE TABLE " + connection.getTable('table_versions') + "(name VARCHAR(255), version INT)";
+                await Model.query(creationQuery);
+            }
+
+            // get version for this table
+            const getVersionQuery = "SELECT version FROM " + connection.getTable('table_versions') + " WHERE name = ?";
+
+            const versionResult = await Model.query(getVersionQuery, [connection.getTable(this.table)]);
+            if (versionResult.length === 0) {
+                console.log("Table " + this.table + " not found, creating");
+                let creationQuery = "CREATE TABLE " + connection.getTable(this.table) + "("
+
+                let autoColumn = null;
+
+                const fieldList = Object.keys(this.fields).map((fieldName) => {
+                    const data = this.fields[fieldName];
+
+                    let fieldRow = "`" + fieldName + "` " + Model._getColumnFromType(data.type);
+
+                    if (data.meta) {
+                        if (data.meta.includes(FIELD_META.REQUIRED)) {
+                            fieldRow += ' NOT NULL'
+                        }
+                        if (data.meta.includes(FIELD_META.AUTO)) {
+                            fieldRow += ' AUTO_INCREMENT';
+                            autoColumn = fieldName;
+                        }
+                    }
+
+                    return fieldRow;
+                });
+
+                if (autoColumn) {
+                    fieldList.push("PRIMARY KEY (" + autoColumn + ")");
+                }
+
+                creationQuery += fieldList.join(", ");
+                creationQuery += ")";
+
+                await Model.query(creationQuery);
+            }
         } else if (connection.getType() === CONNECTION_TYPE.FILE) {
             const path = this.getCacheFile();
             if (!fs.existsSync(path)) {
@@ -107,7 +194,13 @@ class Model {
         }
         
         if (connection.getType() === CONNECTION_TYPE.MYSQL) {
-            throw new Error("MySQL support not coded yet");
+            const query = "SELECT * FROM " + connection.getTable(this.table) + " WHERE id = ?";
+            const result = await Model.query(query, [id]);
+            if (result.length === 0) {
+                return null;
+            }
+
+            return result[0];
         } else if (connection.getType() === CONNECTION_TYPE.FILE) {
             const data = this.readCacheFile();
             for (let i=0;i<data.data.length;i++) {
@@ -123,14 +216,14 @@ class Model {
         }
     }
     
-    async search(query) {
+    async search(queryData) {
         const connection = Connection.getDefaultConnection();
         
         if (connection === null) {
             throw new Error('No default connection set');
         }
         
-        const keys = Object.keys(query);
+        const keys = Object.keys(queryData);
         for (let i=0;i<keys.length;i++) {
             const key = keys[0];
             const data = this.getFieldData(key);
@@ -140,15 +233,28 @@ class Model {
         }
         
         if (connection.getType() === CONNECTION_TYPE.MYSQL) {
-            throw new Error("MySQL support not coded yet");
+            let query = "SELECT * FROM " + connection.getTable(this.table) + " WHERE ";
+
+            const fieldList = [];
+            const values = [];
+            Object.keys(queryData).forEach((key) => {
+                fieldList.push(`${key} = ?`);
+                values.push(queryData[key]);
+            });
+
+            query += fieldList.join(" AND ") + " ORDER BY id asc";
+
+            const results = await Model.query(query, values);
+
+            return results;
         } else if (connection.getType() === CONNECTION_TYPE.FILE) {
             const data = this.readCacheFile();
             const results = [];
             for (let i=0;i<data.data.length;i++) {
                 const obj = data.data[i];
                 let failed = false;
-                Object.keys(query).forEach((key) => {
-                    const value = query[key];
+                Object.keys(queryData).forEach((key) => {
+                    const value = queryData[key];
                     
                     if (obj[key] === undefined && value === null) {
                         // null is valid for unset, so return at this point
@@ -192,7 +298,20 @@ class Model {
         }
         
         if (connection.getType() === CONNECTION_TYPE.MYSQL) {
-            throw new Error("MySQL support not coded yet");
+            let query = "UPDATE " + connection.getTable(this.table) + " SET ";
+
+            const fieldRows = [];
+            const values = [];
+            Object.keys(fields).forEach((key) => {
+                fieldRows.push(`${key} = ?`);
+                values.push(fields[key]);
+            });
+
+            query += fieldRows.join(", ");
+            query += " WHERE id = ?";
+            values.push(id);
+
+            await Model.query(query, values);
         } else if (connection.getType() === CONNECTION_TYPE.FILE) {
             const data = this.readCacheFile();
             const results = [];
@@ -233,22 +352,41 @@ class Model {
             }
         }
         
+        const fieldTypeMap = {};
+
         const tableFields = Object.keys(this.fields);
         for (let i=0;i<tableFields.length;i++) {
             const key = tableFields[i];
             const fieldData = this.getFieldData(key);
+            fieldTypeMap[key] = fieldData.type;
             if (fieldData.meta.includes(FIELD_META.REQUIRED) && !insertData[key]) {
                 throw new Error(`Required field '${key}' not found`);
             }
         }
         
         if (connection.getType() === CONNECTION_TYPE.MYSQL) {
-            throw new Error("MySQL support not coded yet");
+            let query = "INSERT INTO " + connection.getTable(this.table) + "(";
+
+            const fieldList = [];
+            const valueList = [];
+            const valueKeys = [];
+
+            Object.keys(insertData).forEach((key) => {
+                const value = insertData[key];
+                fieldList.push(key);
+                valueList.push(value);
+                valueKeys.push("?");
+            });
+
+            query += fieldList.join(", ") + ") VALUES(" + valueKeys.join(", ") + ")";
+
+            const result = await Model.query(query, valueList);
+            return result.insertId;
         } else if (connection.getType() === CONNECTION_TYPE.FILE) {
             const data = this.readCacheFile();
             
             let newObj = {};
-            let autoData = {};
+            let newId = null;
             
             for (let i=0;i<tableFields.length;i++) {
                 const tableField = tableFields[i];
@@ -258,7 +396,7 @@ class Model {
                         data.auto[tableField] = 1;
                     }
                     newObj[tableField] = data.auto[tableField];
-                    autoData[tableField] = newObj[tableField];
+                    newId = data.auto[tableField];
                     data.auto[tableField] += 1;
                 }
             }
@@ -271,13 +409,13 @@ class Model {
             data.data.push(newObj);
             
             this.writeCacheFile(data);
-            
-            return autoData.id;
+
+            return newId;
         } else {
             throw new Error(`Unexpected connection type ${connection.getType()}`);
         }
     }
-    
+
     async delete(id) {
         const connection = Connection.getDefaultConnection();
         
@@ -286,7 +424,8 @@ class Model {
         }
         
         if (connection.getType() === CONNECTION_TYPE.MYSQL) {
-            throw new Error("MySQL support not coded yet");
+            const query = "DELETE FROM " + connection.getTable(this.table) + " WHERE id = ?";
+            await Model.query(query, [id]);
         } else if (connection.getType() === CONNECTION_TYPE.FILE) {
             const data = this.readCacheFile();
             const results = [];
