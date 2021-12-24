@@ -161,6 +161,15 @@ class Model {
                 creationQuery += ")";
 
                 await Model.query(creationQuery);
+
+                // add the version
+                const setVersionQuery = "INSERT INTO " + connection.getTable('table_versions') + "(version, name) VALUES(?, ?)";
+                await Model.query(setVersionQuery, [this.version, connection.getTable(this.table)]);
+            } else {
+                const version = versionResult[0].version;
+                if (version !== this.version) {
+                    console.log("Version mismatch on table " + this.table + ", expected " + this.version + " got " + version + " TOOD: Do something about this.");
+                }
             }
         } else if (connection.getType() === CONNECTION_TYPE.FILE) {
             const path = this.getCacheFile();

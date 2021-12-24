@@ -16,6 +16,7 @@
     describe('MYSQL', () => {
         let connection;
         let model;
+        const version = 1;
 
         before(() => {
             connection = Connection.mysqlConnection({
@@ -37,7 +38,7 @@
                         type: FIELD_TYPE.STRING,
                     }
                 },
-                1,
+                version,
             );
         });
 
@@ -69,7 +70,23 @@
 
             const tableNames = Object.keys(tableMap);
 
-            assert.equal(tableNames.includes('test_1'), true, 'expected table list to contain "table_1"');
+            assert.equal(tableNames.includes('test_1'), true, 'expected table list to contain "test_1"');
+        });
+
+        it('should insert the correct version into the table', async () => {
+            await model.initTable();
+
+            const getVersionsQuery = "SELECT * FROM table_versions";
+            const versions = await Model.query(getVersionsQuery);
+            const tableMap = versions.reduce((obj, tableData) => {
+                const name = tableData.name;
+                return {
+                    ...obj,
+                    [name]: tableData.version,
+                };
+            }, {});
+
+            assert.equal(tableMap['test_1'], version);
         });
 
         it('should insert and return new insert id', async () => {
