@@ -113,6 +113,7 @@ The values of FIELD_TYPE are:
 |---|---|
 | INT | Integer value |
 | STRING | Open length text value |
+| BIGINT | Larger integer value |
 
 #### FIELD_META
 
