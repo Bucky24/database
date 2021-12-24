@@ -6,6 +6,7 @@ const { Connection, CONNECTION_TYPE } = require('./connection');
 const FIELD_TYPE = {
     INT: 'type/int',
     STRING: 'type/string',
+    BIGINT: 'type/int',
 };
 
 const FIELD_META = {
@@ -94,6 +95,8 @@ class Model {
             return 'INT';
         } else if (type === FIELD_TYPE.STRING) {
             return 'TEXT';
+        } else if (type === FIELD_TYPE.BIGINT) {
+            return 'BIGINT';
         }
     }
 
