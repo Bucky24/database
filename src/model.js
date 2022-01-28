@@ -12,6 +12,7 @@ const FIELD_TYPE = {
 const FIELD_META = {
     AUTO: 'meta/auto',
     REQUIRED: 'meta/required',
+    FILTERED: 'meta/filtered',
 };
 
 class Model {
@@ -26,6 +27,13 @@ class Model {
             },
             ...fields,
         };
+        this.fieldList = Object.keys(this.fields).map((key) => {
+            const field = this.fields[key];
+            return {
+                ...field,
+                id: key,
+            };
+        });
         this.version = version;
     }
     
@@ -106,6 +114,16 @@ class Model {
         }
 
         return value;
+    }
+
+    _getFieldsWithMeta(meta) {
+        return this.fieldList.filter((field) => {
+            if (!field.meta) {
+                // if it has no meta, no way it can match any meta
+                return false;
+            }
+            return field.meta.includes(meta);
+        });
     }
     
     async initTable() {
@@ -453,6 +471,27 @@ class Model {
         } else {
             throw new Error(`Unexpected connection type ${connection.getType()}`);
         }
+    }
+
+    filterForExport(data) {
+        if (Array.isArray(data)) {
+            return data.map((item) => {
+                return this.filterForExport(item);
+            });
+        }
+
+        const result = {...data};
+        const filterFields = this._getFieldsWithMeta(FIELD_META.FILTERED);
+        const filterFieldsIds = filterFields.map((field) => {
+            return field.id;
+        });
+        for (const key in result) {
+            if (filterFieldsIds.includes(key)) {
+                delete result[key];
+            }
+        }
+
+        return result;
     }
 }
 

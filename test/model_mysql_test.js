@@ -5,8 +5,6 @@
  */
 
  const assert = require('assert');
- const path = require('path');
- const fs = require('fs');
  
  const { Model, FIELD_META, FIELD_TYPE } = require('../src/model');
  const { Connection } = require('../src/connection');

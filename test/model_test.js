@@ -414,4 +414,32 @@ describe('model', () => {
             });
         });
     });
+
+    describe('filterForExport', () => {
+        it('should filter fields as expected', () => {
+            const model = new Model("table", {
+                foo: {
+                    meta: [FIELD_META.REQUIRED],
+                },
+                bar: {
+                    meta: [FIELD_META.FILTERED],
+                },
+            });
+            
+            const result = model.filterForExport({ foo: 'foo', bar: 'bar' });
+            assert.deepStrictEqual(result, { foo: 'foo' }); 
+        });
+
+        it('should not change result if no filtered fields', () => {
+            const model = new Model("table", {
+                foo: {
+                    meta: [FIELD_META.REQUIRED],
+                },
+                bar: {},
+            });
+            
+            const result = model.filterForExport({ foo: 'foo', bar: 'bar' });
+            assert.deepStrictEqual(result, { foo: 'foo', bar: 'bar' }); 
+        });
+    });
 });

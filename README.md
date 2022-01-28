@@ -123,6 +123,7 @@ The values of FIELD_META are:
 |---|---|
 | AUTO | Indicates this field is an auto-increment field. There should only be one of these. |
 | REQUIRED | Indicates the given field is required (inserts that do not contain this field will fail and updates that set it to null will fail) |
+| FILTERED | Indicates the given field shouldn't be exposed to clients and should be filtered out upon request. |
 ### initTable
 
 The `initTable` method performs the work to setup the table with given fields in your chosen database. It returns a promise that must resolve before any other methods are safe to call.
@@ -201,4 +202,29 @@ Example:
 
 ```
 await tableModel.remove(obj_id);
+```
+
+### filterForExport
+
+This method takes in a data object and returns a new object with all appropriate fields (fields with the `FILTERED` meta tag) removed. This can be used for prepping data to be returned from an API call or logged. It does not need to be called on an object that came from a Model call, but can be called on any plain JS object.
+
+Example:
+
+```
+const userModel = new Model("user", {
+    password: {
+        meta: [FIELD_META.REQUIRED, FIELD_META.FILTERED],
+    },
+    email: {
+        meta: [FIELD_META.REQUIRED],
+    },
+});
+const userObject = {
+    password: 'a_password_hash',
+    email: 'test@test.com',
+};
+const filteredUserObject = userModel.filterForExport(userObject);
+
+// at this point the password has been removed
+console.log(filteredUserObject);
 ```

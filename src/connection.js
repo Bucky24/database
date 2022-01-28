@@ -1,5 +1,4 @@
 const fs = require('fs');
-const mysql = require('mysql2');
 
 const CONNECTION_TYPE = {
     MYSQL: 'connection/mysql',
@@ -28,6 +27,8 @@ class Connection {
             }
             this.connection = this.data.cacheDir;
         } else if (type === CONNECTION_TYPE.MYSQL) {
+            // don't attempt to load this until we actually need it
+            const mysql = require('mysql2');
             const connection = mysql.createConnection(this.data);
             this.connection = connection;
         }
