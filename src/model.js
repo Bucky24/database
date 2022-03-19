@@ -7,6 +7,7 @@ const FIELD_TYPE = {
     INT: 'type/int',
     STRING: 'type/string',
     BIGINT: 'type/int',
+    JSON: 'type/json',
 };
 
 const FIELD_META = {
@@ -102,6 +103,8 @@ class Model {
         if (type === FIELD_TYPE.INT) {
             return 'INT';
         } else if (type === FIELD_TYPE.STRING) {
+            return 'TEXT';
+        } else if (type === FIELD_TYPE.JSON) {
             return 'TEXT';
         } else if (type === FIELD_TYPE.BIGINT) {
             return 'BIGINT';
@@ -215,6 +218,27 @@ class Model {
             meta: this.fields[field].meta || [],
         }
     }
+
+    processResult(result) {
+        Object.keys(result).forEach((key) => {
+            const value = result[key];
+            const data = this.getFieldData(key);
+            if (data.type === FIELD_TYPE.JSON) {
+                result[key] = JSON.parse(value);
+            }
+        });
+
+        return result;
+    }
+
+    processForSave(value, field) {
+        const data = this.getFieldData(field);
+        if (data.type === FIELD_TYPE.JSON) {
+            return JSON.stringify(value);
+        }
+
+        return value;
+    }
     
     async get(id) {
         const connection = Connection.getDefaultConnection();
@@ -230,13 +254,13 @@ class Model {
                 return null;
             }
 
-            return result[0];
+            return this.processResult(result[0]);
         } else if (connection.getType() === CONNECTION_TYPE.FILE) {
             const data = this.readCacheFile();
             for (let i=0;i<data.data.length;i++) {
                 const obj = data.data[i];
                 if (obj.id === id) {
-                    return obj;
+                    return this.processResult(obj);
                 }
             }
             
@@ -276,7 +300,9 @@ class Model {
 
             const results = await Model.query(query, values);
 
-            return results;
+            return results.map((result) => {
+                return this.processResult(result);
+            });
         } else if (connection.getType() === CONNECTION_TYPE.FILE) {
             const data = this.readCacheFile();
             const results = [];
@@ -297,7 +323,7 @@ class Model {
                 });
                 
                 if (!failed) {
-                    results.push(obj);
+                    results.push(this.processResult(obj));
                 }
             }
             
@@ -334,7 +360,7 @@ class Model {
             const values = [];
             Object.keys(fields).forEach((key) => {
                 fieldRows.push(`${key} = ?`);
-                values.push(fields[key]);
+                values.push(this.processForSave(fields[key], key));
             });
 
             query += fieldRows.join(", ");
@@ -353,7 +379,7 @@ class Model {
                         if (fields[key] === null) {
                             delete obj[key];
                         } else {
-                            obj[key] = fields[key];
+                            obj[key] = this.processForSave(fields[key], key);
                         }
                     });
                     break;
@@ -404,7 +430,7 @@ class Model {
             Object.keys(insertData).forEach((key) => {
                 const value = insertData[key];
                 fieldList.push(key);
-                valueList.push(value);
+                valueList.push(this.processForSave(value, key));
                 valueKeys.push("?");
             });
 
@@ -430,6 +456,10 @@ class Model {
                     data.auto[tableField] += 1;
                 }
             }
+
+            Object.keys(insertData).forEach((key) => {
+                insertData[key] = this.processForSave(insertData[key], key);
+            });
             
             newObj = {
                 ...newObj,

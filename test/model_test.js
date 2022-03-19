@@ -2,7 +2,7 @@ const assert = require('assert');
 const path = require('path');
 const fs = require('fs');
 
-const { Model, FIELD_META } = require('../src/model');
+const { Model, FIELD_META, FIELD_TYPE } = require('../src/model');
 const { Connection } = require('../src/connection');
 
 const cachePath = path.join(__dirname, 'cache_dir');
@@ -49,7 +49,7 @@ describe('model', () => {
     
         afterEach(() => {
             Connection.setDefaultConnection(null);
-            fs.rmdirSync(cachePath, { recursive: true });
+            fs.rmSync(cachePath, { recursive: true });
         });
 
         it('should create expected cache file', async () => {
@@ -70,7 +70,7 @@ describe('model', () => {
             
             afterEach(() => {
                 Connection.setDefaultConnection(null);
-                fs.rmdirSync(cachePath, { recursive: true });
+                fs.rmSync(cachePath, { recursive: true });
             });
 
             it('should prevent inserting a non existent field', async () => {
@@ -106,7 +106,7 @@ describe('model', () => {
             
             afterEach(() => {
                 Connection.setDefaultConnection(null);
-                fs.rmdirSync(cachePath, { recursive: true });
+                fs.rmSync(cachePath, { recursive: true });
             });
 
             it('should insert data as expected', async () => {
@@ -132,6 +132,27 @@ describe('model', () => {
                     }],
                 });
             });
+
+            it('should insert json as expeced', async () => {
+                const model = new Model("table", {
+                    foo: {
+                        type: FIELD_TYPE.JSON,
+                    },
+                });
+                await model.initTable();
+                const id = await model.insert({
+                    foo: { foo: 'bar' },
+                });
+                const content = fs.readFileSync(filePath, 'utf8');
+                const json = JSON.parse(content);
+                assert.deepStrictEqual(json, {
+                    auto: { id: id + 1 },
+                    data: [{
+                        id,
+                        foo: '{"foo":"bar"}',
+                    }],
+                });
+            });
         });
     });
     
@@ -146,7 +167,7 @@ describe('model', () => {
             
             afterEach(() => {
                 Connection.setDefaultConnection(null);
-                fs.rmdirSync(cachePath, { recursive: true });
+                fs.rmSync(cachePath, { recursive: true });
             });
             
             it('should be able to fetch data by id', async () => {
@@ -167,13 +188,28 @@ describe('model', () => {
                     foo: 'bar',
                 });
             });
+
+            it('should retrieve json as expected', async () => {
+                const model = new Model("table", {
+                    foo: {
+                        type: FIELD_TYPE.JSON,
+                    },
+                });
+                await model.initTable();
+                const id = await model.insert({
+                    foo: { foo: 'bar' },
+                });
+                const data = await model.get(1);
+                assert.deepStrictEqual(data, {
+                    id,
+                    foo: {foo: 'bar'},
+                });
+            });
         });
     });
     
     describe('search', () => {
         describe('FILE', () => {
-            const filePath = path.join(cachePath, "table.json");
-
             beforeEach(() => {
                 const connection = Connection.fileConnection(cachePath);
                 Connection.setDefaultConnection(connection);
@@ -181,7 +217,7 @@ describe('model', () => {
             
             afterEach(() => {
                 Connection.setDefaultConnection(null);
-                fs.rmdirSync(cachePath, { recursive: true });
+                fs.rmSync(cachePath, { recursive: true });
             });
            
             it('should return expected data', async () => {
@@ -234,12 +270,48 @@ describe('model', () => {
                     foo: 'bin',
                 }]);
             });
+
+            it('should return json fields as expected', async () => {
+                it('should retrieve json as expected', async () => {
+                    const model = new Model("table", {
+                        foo: {
+                            type: FIELD_TYPE.JSON,
+                        },
+                        bar: {
+                            type: FIELD_TYPE.STRING,
+                        },
+                    });
+                    await model.initTable();
+                    await model.insert({
+                        foo: { foo: 'bar' },
+                        bar: '123',
+                    });
+                    await model.insert({
+                        foo: { foo: 'bar2' },
+                        bar: '123',
+                    });
+                    const data = await model.search({
+                        bar: '123',
+                    });
+                    assert.deepStrictEqual(data, [
+                        {
+                            id: 1,
+                            foo: {foo: 'bar'},
+                            bar: '123',
+                        },
+                        {
+                            id: 2,
+                            foo: {foo: 'bar2'},
+                            bar: '123',
+                        },
+                    ]);
+                });
+            });
         });
     });
     
     describe('update', () => {
         describe('general', () => {
-            const filePath = path.join(cachePath, "table.json");
             let model;
 
             beforeEach(async () => {
@@ -249,19 +321,21 @@ describe('model', () => {
                     foo: {
                         meta: [FIELD_META.REQUIRED],
                     },
-                    bar: {},
+                    bar: {
+                        type: FIELD_META.JSON,
+                    },
                 });
                 await model.initTable();
                 
                 await model.insert({
                     foo: 'bar',
-                    bar: 'baz',
+                    bar: { foo: 'bar' },
                 });
             });
             
             afterEach(() => {
                 Connection.setDefaultConnection(null);
-                fs.rmdirSync(cachePath, { recursive: true });
+                fs.rmSync(cachePath, { recursive: true });
             });
             
             it('should fail to update a nonexistent field', async () => {
@@ -269,7 +343,7 @@ describe('model', () => {
                 assert.deepStrictEqual(data, {
                     id: 1,
                     foo: 'bar',
-                    bar: 'baz',
+                    bar: { foo: 'bar' },
                 });
                 
                 await assertThrows(async () => {
@@ -282,12 +356,30 @@ describe('model', () => {
                 assert.deepStrictEqual(data, {
                     id: 1,
                     foo: 'bar',
-                    bar: 'baz',
+                    bar: { foo: 'bar' },
                 });
                 
                 await assertThrows(async () => {
                     await model.update(1, { foo: null });
                 }, "Field 'foo' cannot be set to null");
+            });
+
+            it('should update a json field', async () => {
+                let data = await model.get(1);
+                assert.deepStrictEqual(data, {
+                    id: 1,
+                    foo: 'bar',
+                    bar: { foo: 'bar' },
+                });
+
+                await model.update(1, { bar: { foo: 'bar2' }});
+
+                data = await model.get(1);
+                assert.deepStrictEqual(data, {
+                    id: 1,
+                    foo: 'bar',
+                    bar: { foo: 'bar2' },
+                });
             });
         });
 
@@ -314,7 +406,7 @@ describe('model', () => {
             
             afterEach(() => {
                 Connection.setDefaultConnection(null);
-                fs.rmdirSync(cachePath, { recursive: true });
+                fs.rmSync(cachePath, { recursive: true });
             });
             
             it('should update data to new value as expected', async () => {
@@ -382,7 +474,7 @@ describe('model', () => {
             
             afterEach(() => {
                 Connection.setDefaultConnection(null);
-                fs.rmdirSync(cachePath, { recursive: true });
+                fs.rmSync(cachePath, { recursive: true });
             });
             
             it('should remove row as expected', async () => {

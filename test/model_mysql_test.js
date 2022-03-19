@@ -34,6 +34,9 @@
                     },
                     bar: {
                         type: FIELD_TYPE.STRING,
+                    },
+                    json: {
+                        type: FIELD_TYPE.JSON,
                     }
                 },
                 version,
@@ -106,6 +109,7 @@
             const id = await model.insert({
                 foo: 7,
                 bar: 'abc',
+                json: { foo: 'bar' },
             });
 
             const row = await model.get(id);
@@ -114,6 +118,7 @@
                 id,
                 foo: 7,
                 bar: 'abc',
+                json: { foo: 'bar' },
             });
         });
 
@@ -126,6 +131,7 @@
             await model.update(id, {
                 foo: 12,
                 bar: 'bcd',
+                json: { foo: 'bar' },
             });
 
             const row = await model.get(id);
@@ -134,6 +140,7 @@
                 id,
                 foo: 12,
                 bar: 'bcd',
+                json: { foo: 'bar' },
             });
         });
 
@@ -145,6 +152,7 @@
             const id2 = await model.insert({
                 foo: 7,
                 bar: 'blah',
+                json: { foo: 'bar' },
             });
             const id3 = await model.insert({
                 foo: 7,
@@ -158,6 +166,7 @@
             assert.equal(rows.length, 3, "Expected 3 rows");
             assert.equal(rows[0].id, id, "row 1 should be first id");
             assert.equal(rows[1].id, id2, "row 2 should be second id");
+            assert.deepEqual(rows[1].json, { foo: 'bar' }, "row 2 should have correct json data");
             assert.equal(rows[2].id, id3, "row 3 should be third id");
         });
 

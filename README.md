@@ -114,6 +114,7 @@ The values of FIELD_TYPE are:
 | INT | Integer value |
 | STRING | Open length text value |
 | BIGINT | Larger integer value |
+| JSON | Open length text value that contains JSON data |
 
 #### FIELD_META
 
