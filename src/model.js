@@ -8,6 +8,7 @@ const FIELD_TYPE = {
     STRING: 'type/string',
     BIGINT: 'type/int',
     JSON: 'type/json',
+    BOOLEAN: 'type/boolean',
 };
 
 const FIELD_META = {
@@ -108,6 +109,8 @@ class Model {
             return 'TEXT';
         } else if (type === FIELD_TYPE.BIGINT) {
             return 'BIGINT';
+        } else if (type === FIELD_TYPE.BOOLEAN) {
+            return 'BOOLEAN';
         }
     }
 
@@ -415,7 +418,7 @@ class Model {
             const key = tableFields[i];
             const fieldData = this.getFieldData(key);
             fieldTypeMap[key] = fieldData.type;
-            if (fieldData.meta.includes(FIELD_META.REQUIRED) && !insertData[key]) {
+            if (fieldData.meta.includes(FIELD_META.REQUIRED) && (insertData[key] === null || insertData[key] === undefined)) {
                 throw new Error(`Required field '${key}' not found`);
             }
         }

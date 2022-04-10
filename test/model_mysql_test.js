@@ -181,5 +181,31 @@
             const result = await model.get(id);
             assert.deepEqual(result, null, "Row should be null");
         });
+
+        it('should handle a boolean field as expected', async () => {
+            const model = new Model(
+                'test_2',
+                {
+                    foo: {
+                        type: FIELD_TYPE.BOOLEAN,
+                        meta: [FIELD_META.REQUIRED],
+                    },
+                },
+                version,
+            );
+            await model.initTable();
+
+            const id = await model.insert({
+                foo: true,
+            }); 
+            const id2 = await model.insert({
+                foo: false,
+            });
+    
+            const result = await model.get(id);
+            assert.equal(result.foo, true);
+            const result2 = await model.get(id2);
+            assert.equal(result2.foo, false);
+        });
     });
 });
