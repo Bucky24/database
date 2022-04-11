@@ -31,9 +31,9 @@ Creates a connection that represents a connection to a mysql database
 
 | Param | Type | Description |
 |---|---|---|
-| connectionObject | Object | An object containing the following keys: "password", "username", "host", "database" |
+| connectionObject | Object | An object containing the following keys: "password", "username", "host", "database", or "url", which is a standard MySQL Url string (if "url" is passed all other keys are ignored) |
 
-Example:
+Examples:
 
 ```
 const connection = Connection.mysqlConnection({
@@ -41,6 +41,11 @@ const connection = Connection.mysqlConnection({
     username: 'user',
     password: 'secretpassword',
     database: 'app_database',
+});
+
+const connection = Connection.mysqlConnection({
+    url: "mysql://user:secretpassword@localhost/app_database",
+
 });
 ```
 
