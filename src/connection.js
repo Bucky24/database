@@ -29,21 +29,21 @@ class Connection {
         } else if (type === CONNECTION_TYPE.MYSQL) {
             if (data.url) {
                 // break the url down into component pieces
-                // mysql://b9d2a90d008be7:6a7d0fbc@us-cdbr-east-04.cleardb.com/heroku_053bffee2fa2f72?reconnect=true
 
                 const urlPieces = new URL(data.url);
-                //console.log(urlPieces);
                 delete data.url;
 
                 let { protocol, host, username, password, pathname } = urlPieces;
                 protocol = protocol.substr(0, protocol.length-1);
+
+                const [ realHost, port ] = host.split(":");
 
                 if (protocol !== "mysql") {
                     throw new Error('DB connection url protocol must be mysql, got ' + protocol);
                 }
 
                 this.data = {
-                    host,
+                    host: realHost,
                     user: username,
                     password,
                     database: pathname.substr(1),
