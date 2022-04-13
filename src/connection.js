@@ -20,18 +20,23 @@ class Connection {
         this.type = type;
         this.data = data;
         this.prefix = prefix;
+        this.data = data;
         
-        if (type === CONNECTION_TYPE.FILE) {
+        this._createConnection();
+    }
+
+    _createConnection() {
+        if (this.type === CONNECTION_TYPE.FILE) {
             if (!fs.existsSync(this.data.cacheDir)) {
                 fs.mkdirSync(this.data.cacheDir);
             }
             this.connection = this.data.cacheDir;
-        } else if (type === CONNECTION_TYPE.MYSQL) {
-            if (data.url) {
+        } else if (this.type === CONNECTION_TYPE.MYSQL) {
+            if (this.data.url) {
                 // break the url down into component pieces
 
-                const urlPieces = new URL(data.url);
-                delete data.url;
+                const urlPieces = new URL(this.data.url);
+                delete this.data.url;
 
                 let { protocol, host, username, password, pathname } = urlPieces;
                 protocol = protocol.substr(0, protocol.length-1);
@@ -54,6 +59,15 @@ class Connection {
             const mysql = require('mysql2');
             const connection = mysql.createConnection(this.data);
             this.connection = connection;
+
+            this.connection.on('error', (e) => {
+                if (e.message.includes('Connection lost') || e.message.includes('The client was disconnected')) {
+                    console.log('Database server terminated the connection');
+                    this.close();
+                } else {
+                    console.log(e);
+                }
+            });
         }
     }
     
@@ -66,6 +80,10 @@ class Connection {
     }
     
     getConnection() {
+        if (!this.connection) {
+            console.log('connecting again');
+            this._createConnection();
+        }
         return this.connection;
     }
 
@@ -77,8 +95,12 @@ class Connection {
     }
 
     close() {
+        const connection = this.connection;
+        this.connection = null;
         if (this.type === CONNECTION_TYPE.MYSQL) {
-            return this.getConnection().close();
+            if (connection) {
+                return connection.close();
+            }
         }
     }
 }

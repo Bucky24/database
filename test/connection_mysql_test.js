@@ -8,6 +8,20 @@
  
  const { Connection } = require('../src/connection');
  const dbAuth = require('./db.json');
+
+ function run(connection, query) {
+    return new Promise((resolve) => {
+        connection.getConnection().query(query, (error, results, fields) => {
+            resolve(results);
+        });
+    });
+ }
+
+ function sleep(ms) {
+    return new Promise ((resolve) => {
+        setTimeout(resolve, ms);
+    });
+ }
  
  describe('connection', () => {
     describe('MYSQL', () => {
@@ -22,6 +36,25 @@
             await new Promise((resolve) => {
                 setTimeout(resolve, 50);
             });
+
+            await connection.close();
+        });
+
+        it('should reconnect after timeout', async function() {
+            // we are waiting 3 seconds for timeout, make sure test does not timeout
+            this.timeout(5000);
+            connection = Connection.mysqlConnection({ url: dbAuth.url });
+
+            query = "set session wait_timeout = 2";
+            await run(connection, query);
+
+            await sleep(3000);
+
+            assert.equal(connection.connection, null);
+
+            // should recreate the connection
+            const dbConnection = connection.getConnection();
+            assert.notEqual(dbConnection, null);
 
             await connection.close();
         });
