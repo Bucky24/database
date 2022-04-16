@@ -2,7 +2,7 @@ const assert = require('assert');
 const path = require('path');
 const fs = require('fs');
 
-const { Model, FIELD_META, FIELD_TYPE } = require('../src/model');
+const { Model, FIELD_META, FIELD_TYPE, ORDER } = require('../src/model');
 const { Connection } = require('../src/connection');
 
 const cachePath = path.join(__dirname, 'cache_dir');
@@ -306,6 +306,77 @@ describe('model', () => {
                         },
                     ]);
                 });
+            });
+
+            it('should limit results as expected', async () => {
+                const model = new Model("table", {
+                    bar: {
+                        type: FIELD_TYPE.INT,
+                    },
+                });
+                await model.initTable();
+                for (let i=0;i<10;i++) {
+                    await model.insert({ bar: i });
+                }
+                const data = await model.search({}, null, 3);
+                assert.equal(data.length, 3);
+                assert.deepStrictEqual(data, [
+                    {
+                        id: 1,
+                        bar: 0,
+                    },
+                    {
+                        id: 2,
+                        bar: 1,
+                    },
+                    {
+                        id: 3,
+                        bar: 2,
+                    },
+                ]);
+            });
+
+            it('should order the results as expected', async () => {
+                const model = new Model("table", {
+                    bar: {
+                        type: FIELD_TYPE.STRING,
+                    },
+                });
+                await model.initTable();
+                await model.insert({ bar: 'arg_a' });
+                await model.insert({ bar: 'arg_b' });
+                await model.insert({ bar: 'arg_c' });
+                let data = await model.search({}, { bar: ORDER.DESC });
+                assert.deepStrictEqual(data, [
+                    {
+                        id: 3,
+                        bar: 'arg_c',
+                    },
+                    {
+                        id: 2,
+                        bar: 'arg_b',
+                    },
+                    {
+                        id: 1,
+                        bar: 'arg_a',
+                    },
+                ]);
+
+                data = await model.search({}, { bar: ORDER.ASC });
+                assert.deepStrictEqual(data, [
+                    {
+                        id: 1,
+                        bar: 'arg_a',
+                    },
+                    {
+                        id: 2,
+                        bar: 'arg_b',
+                    },
+                    {
+                        id: 3,
+                        bar: 'arg_c',
+                    },
+                ]);
             });
         });
     });

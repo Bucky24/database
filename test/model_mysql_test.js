@@ -6,7 +6,7 @@
 
  const assert = require('assert');
  
- const { Model, FIELD_META, FIELD_TYPE } = require('../src/model');
+ const { Model, FIELD_META, FIELD_TYPE, ORDER } = require('../src/model');
  const { Connection } = require('../src/connection');
  const dbAuth = require('./db.json');
  
@@ -54,6 +54,13 @@
             }
 
             connection.close();
+        });
+
+        afterEach(async () => {
+            const query = "DELETE FROM test_1";
+
+            await Model.query(query);
+            await Model.query('ALTER TABLE test_1 AUTO_INCREMENT = 1');
         });
 
         it('should create the new table as expected', async () => {
@@ -206,6 +213,88 @@
             assert.equal(result.foo, true);
             const result2 = await model.get(id2);
             assert.equal(result2.foo, false);
+        });
+
+        it('should handle limit as expected', async () => {
+            await model.insert({ foo: true, bar: '1' });
+            await model.insert({ foo: true, bar: '2' });
+            await model.insert({ foo: true, bar: '3' });
+            await model.insert({ foo: true, bar: '4' });
+            await model.insert({ foo: true, bar: '5' });
+
+            const results = await model.search({}, null, 3);
+
+            assert.equal(results.length, 3);
+            assert.deepStrictEqual(results, [
+                {
+                    id: 1,
+                    foo: 1,
+                    bar: '1',
+                    json: null,
+                },
+                {
+                    id: 2,
+                    foo: 1,
+                    bar: '2',
+                    json: null,
+                },
+                {
+                    id: 3,
+                    foo: 1,
+                    bar: '3',
+                    json: null,
+                },
+            ]);
+        });
+
+        it('should order as expected', async () => {
+            await model.insert({ foo: true, bar: '1' });
+            await model.insert({ foo: true, bar: '2' });
+            await model.insert({ foo: true, bar: '3' });
+
+            let results = await model.search({}, { bar: ORDER.DESC });
+            assert.deepStrictEqual(results, [
+                {
+                    id: 3,
+                    foo: 1,
+                    bar: '3',
+                    json: null,
+                },
+                {
+                    id: 2,
+                    foo: 1,
+                    bar: '2',
+                    json: null,
+                },
+                {
+                    id: 1,
+                    foo: 1,
+                    bar: '1',
+                    json: null,
+                },
+            ]);
+
+            results = await model.search({}, { bar: ORDER.ASC });
+            assert.deepStrictEqual(results, [
+                {
+                    id: 1,
+                    foo: 1,
+                    bar: '1',
+                    json: null,
+                },
+                {
+                    id: 2,
+                    foo: 1,
+                    bar: '2',
+                    json: null,
+                },
+                {
+                    id: 3,
+                    foo: 1,
+                    bar: '3',
+                    json: null,
+                },
+            ]);
         });
     });
 });

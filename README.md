@@ -131,6 +131,15 @@ The values of FIELD_META are:
 | AUTO | Indicates this field is an auto-increment field. There should only be one of these. |
 | REQUIRED | Indicates the given field is required (inserts that do not contain this field will fail and updates that set it to null will fail) |
 | FILTERED | Indicates the given field shouldn't be exposed to clients and should be filtered out upon request. |
+
+#### ORDER
+
+The values of ORDER are:
+
+| Name | Description |
+|---|---|
+| ASC | Indicates it should be ordered ascending |
+| DESC | Indicates that it should be ordered descending |
 ### initTable
 
 The `initTable` method performs the work to setup the table with given fields in your chosen database. It returns a promise that must resolve before any other methods are safe to call.
@@ -155,6 +164,8 @@ The search method takes in a query to search for and returns all objects that ma
 | Param | Type | Description |
 |---|---|---|
 | query | Object | An object with keys being the fields to look for and values being the expected value. Required |
+| order | Object | An object with keys being the fields to order by and values being one of ORDER. Note these fields are not escaped due to a limitation in `node-mysql`. Optional |
+| limit | Integer | Indicates how many results to return. Optional |
 
 Example:
 

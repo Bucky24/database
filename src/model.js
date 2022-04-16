@@ -17,6 +17,11 @@ const FIELD_META = {
     FILTERED: 'meta/filtered',
 };
 
+const ORDER = {
+    ASC: 'order/asc',
+    DESC: 'order/desc',
+};
+
 class Model {
     constructor(table, fields, version) {
         this.table = table;
@@ -273,7 +278,7 @@ class Model {
         }
     }
     
-    async search(queryData) {
+    async search(queryData, order = null, limit = null) {
         const connection = Connection.getDefaultConnection();
         
         if (connection === null) {
@@ -290,7 +295,8 @@ class Model {
         }
         
         if (connection.getType() === CONNECTION_TYPE.MYSQL) {
-            let query = "SELECT * FROM " + connection.getTable(this.table) + " WHERE ";
+            let query = "SELECT * FROM " + connection.getTable(this.table);
+            
 
             const fieldList = [];
             const values = [];
@@ -299,7 +305,33 @@ class Model {
                 values.push(queryData[key]);
             });
 
-            query += fieldList.join(" AND ") + " ORDER BY id asc";
+            if (fieldList.length > 0) {
+                query += " WHERE " + fieldList.join(" AND ");
+            }
+
+            if (order) {
+                const orderList = [];
+                for (const field in order) {
+                    const direction = order[field];
+                    let directionStr = '';
+                    if (direction === ORDER.ASC) {
+                        directionStr = 'ASC';
+                    } else if (direction === ORDER.DESC) {
+                        directionStr = 'DESC';
+                    }
+                    // would love to parameterize this but it crashes if I do
+                    orderList.push(`${field} ${directionStr}`);
+                    //values.push(field);
+                }
+                query += " ORDER BY " + orderList.join(", ");
+            } else {
+                query += " ORDER BY id asc";
+            }
+
+            if (limit) {
+                query += " LIMIT ?";
+                values.push(limit.toString());
+            }
 
             const results = await Model.query(query, values);
 
@@ -309,8 +341,33 @@ class Model {
         } else if (connection.getType() === CONNECTION_TYPE.FILE) {
             const data = this.readCacheFile();
             const results = [];
-            for (let i=0;i<data.data.length;i++) {
-                const obj = data.data[i];
+            const useData = data.data;
+
+            if (order) {
+                useData.sort((a, b) => {
+                    for (const field in order) {
+                        const direction = order[field];
+
+                        if (
+                            (direction === ORDER.ASC && a[field] < b[field]) ||
+                            (direction === ORDER.DESC && a[field] > b[field])
+                        ) {
+                            return -1;
+                        }
+
+                        if (
+                            (direction === ORDER.ASC && a[field] > b[field]) ||
+                            (direction === ORDER.DESC && a[field] < b[field])
+                        ) {
+                            return 1;
+                        }
+                    }
+
+                    return 0;
+                });
+            }
+            for (let i=0;i<useData.length;i++) {
+                const obj = useData[i];
                 let failed = false;
                 Object.keys(queryData).forEach((key) => {
                     const value = queryData[key];
@@ -327,6 +384,10 @@ class Model {
                 
                 if (!failed) {
                     results.push(this.processResult(obj));
+                }
+
+                if (limit && results.length >= limit) {
+                    break;
                 }
             }
             
@@ -532,4 +593,5 @@ module.exports = {
     Model,
     FIELD_TYPE,
     FIELD_META,
+    ORDER,
 };
