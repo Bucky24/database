@@ -301,8 +301,18 @@ class Model {
             const fieldList = [];
             const values = [];
             Object.keys(queryData).forEach((key) => {
-                fieldList.push(`${key} = ?`);
-                values.push(queryData[key]);
+                const value = queryData[key];
+                if (Array.isArray(value)) {
+                    const questionList = [];
+                    for (const item of value) {
+                        questionList.push('?');
+                        values.push(item);
+                    }
+                    fieldList.push(`${key} in (${questionList.join(', ')})`);
+                } else {
+                    fieldList.push(`${key} = ?`);
+                    values.push(queryData[key]);
+                }
             });
 
             if (fieldList.length > 0) {
@@ -373,12 +383,17 @@ class Model {
                     const value = queryData[key];
                     
                     if (obj[key] === undefined && value === null) {
-                        // null is valid for unset, so return at this point
                         return;
                     }
-                    
-                    if (obj[key] !== value) {
-                        failed = true;
+
+                    if (Array.isArray(value)) {
+                        if (!value.includes(obj[key])) {
+                            failed = true;
+                        }
+                    } else {
+                        if (obj[key] !== value) {
+                            failed = true;
+                        }
                     }
                 });
                 

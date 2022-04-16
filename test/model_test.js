@@ -378,6 +378,29 @@ describe('model', () => {
                     },
                 ]);
             });
+
+            it('should search for multiple values in a field', async () => {
+                const model = new Model("table", {
+                    bar: {
+                        type: FIELD_TYPE.STRING,
+                    },
+                });
+                await model.initTable();
+                await model.insert({ bar: 'arg_a' });
+                await model.insert({ bar: 'arg_b' });
+                await model.insert({ bar: 'arg_c' });
+                let data = await model.search({ bar: ['arg_a', 'arg_c'] });
+                assert.deepStrictEqual(data, [
+                    {
+                        id: 1,
+                        bar: 'arg_a',
+                    },
+                    {
+                        id: 3,
+                        bar: 'arg_c',
+                    },
+                ]);
+            });
         });
     });
     

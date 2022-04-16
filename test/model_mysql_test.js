@@ -296,5 +296,29 @@
                 },
             ]);
         });
+
+        describe('search', () => {
+            it('should search for multiple values in a field', async () => {
+                await model.insert({ foo: true, bar: '1' });
+                await model.insert({ foo: true, bar: '2' });
+                await model.insert({ foo: true, bar: '3' });
+    
+                let results = await model.search({ bar: ['1', '3']});
+                assert.deepStrictEqual(results, [
+                    {
+                        id: 1,
+                        foo: 1,
+                        bar: '1',
+                        json: null,
+                    },
+                    {
+                        id: 3,
+                        foo: 1,
+                        bar: '3',
+                        json: null,
+                    },
+                ]);
+            });
+        });
     });
 });
