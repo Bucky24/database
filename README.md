@@ -13,7 +13,7 @@ Currently only file connections and mysql connections are supported. While you c
 
 ### Connection.fileConnection
 
-Creates a connection that represents a connection to a flat file.
+Creates a connection to a flat file (_not_ a sqlite file). Returns a Promise that resolves to the connection.
 
 | Param | Type | Description |
 |---|---|---|
@@ -22,12 +22,12 @@ Creates a connection that represents a connection to a flat file.
 Example:
 
 ```
-const connection = Connection.fileConnection(path.join(__dirname, "cache"));
+const connection = await Connection.fileConnection(path.join(__dirname, "cache"));
 ```
 
 ### Connection.mysqlConnection
 
-Creates a connection that represents a connection to a mysql database
+Creates a connection to a mysql database. Returns a Promise that resolves to the connection.
 
 *NOTE*: In order to use mysql you must have the mysql2 module installed. This project has been tested with version 2 of mysql2.
 
@@ -38,7 +38,7 @@ Creates a connection that represents a connection to a mysql database
 Examples:
 
 ```
-const connection = Connection.mysqlConnection({
+const connection = await Connection.mysqlConnection({
     host: 'localhost',
     username: 'user',
     password: 'secretpassword',
@@ -47,7 +47,32 @@ const connection = Connection.mysqlConnection({
 
 const connection = Connection.mysqlConnection({
     url: "mysql://user:secretpassword@localhost/app_database",
+});
+```
 
+### Connection.postgresConnection
+
+Creates a connection to a postgres database. Returns a Promise that resolves to the connection.
+
+*Note:* In order to use postgres you must have the pg module installed. This project has been tested on version 8 of pg.
+
+| Param | Type | Description |
+|---|---|---|
+| connectionObject | Object | An object containing the following keys: "password", "username", "host", "database", "port", or "url", which is a standard PostgreSQL URL string (if "url" is passed all other keys are ignored) |
+
+Examples:
+
+```
+const connection = await Connection.postgresConnection({
+    host: 'localhost',
+    usern 'user',
+    password: 'secretpassword',
+    database: 'app_database',
+    port: 3211
+});
+
+const connection = Connection.postgresConnection({
+    url: "postgresql://user:secretpassword@localhost:3211/app_database",
 });
 ```
 
