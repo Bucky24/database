@@ -29,6 +29,8 @@ const connection = Connection.fileConnection(path.join(__dirname, "cache"));
 
 Creates a connection that represents a connection to a mysql database
 
+*NOTE*: In order to use mysql you must have the mysql2 module installed. This project has been tested with version 2 of mysql2.
+
 | Param | Type | Description |
 |---|---|---|
 | connectionObject | Object | An object containing the following keys: "password", "username", "host", "database", or "url", which is a standard MySQL Url string (if "url" is passed all other keys are ignored) |

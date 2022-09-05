@@ -27,8 +27,5 @@
     "devDependencies": {
         "mocha": "9.2.0",
         "mysql2": "2.3.3"
-    },
-    "peerDependencies": {
-        "mysql2": "2.3.3"
     }
 }
