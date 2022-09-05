@@ -88,21 +88,43 @@ class Model {
             throw new Error('No default connection set');
         }
 
-        return new Promise((resolve, reject) => {
-            const callback = (error, results, fields) => {
-                if (error) {
-                    reject(error);
-                    return;
-                }
+        if (connection.getType() === CONNECTION_TYPE.MYSQL) {
+            return new Promise((resolve, reject) => {
+                const callback = (error, results, fields) => {
+                    if (error) {
+                        reject(error);
+                        return;
+                    }
 
-                resolve(results);
-            };
-            if (bind) {
-                connection.getConnection().execute(query, bind, callback);
-            } else {
-                connection.getConnection().query(query, callback);
-            }
-        });
+                    resolve(results);
+                };
+                if (bind) {
+                    connection.getConnection().execute(query, bind, callback);
+                } else {
+                    connection.getConnection().query(query, callback);
+                }
+            });
+        } else if (connection.getType() === CONNECTION_TYPE.POSTGRES) {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    let result;
+                    if (bind) {
+                        result = await connection.getConnection().query(query, bind);
+                    } else {
+                        result = await connection.getConnection().query(query);
+                    }
+                    resolve(result.rows);
+                } catch (error) {
+                    if (error.message.startsWith("syntax error")) {
+                        reject(new Error("Syntax error for query " + query + ": " + error.message));
+                    } else {
+                        reject(error);
+                    }
+                }
+            });
+        } else {
+            throw new Error('query called with invalid connection type: ' + connection.getType());
+        }
     }
 
     static _getColumnFromType(type) {
@@ -144,7 +166,15 @@ class Model {
             throw new Error('No default connection set');
         }
         
-        if (connection.getType() === CONNECTION_TYPE.MYSQL) {
+        if (connection.getType() === CONNECTION_TYPE.FILE) {
+            const path = this.getCacheFile();
+            if (!fs.existsSync(path)) {
+                this.writeCacheFile({
+                    auto: {},
+                    data: [],
+                });
+            }
+        } else if (connection.getType() === CONNECTION_TYPE.MYSQL) {
             // first see if our versions table exists
             const getVersionsQuery = "SELECT * FROM information_schema.tables WHERE table_schema = '" + connection.getData()['database'] + "' AND table_name = '" + connection.getTable('table_versions') + "' LIMIT 1;"
 
@@ -203,13 +233,63 @@ class Model {
                     console.log("Version mismatch on table " + this.table + ", expected " + this.version + " got " + version + " TOOD: Do something about this.");
                 }
             }
-        } else if (connection.getType() === CONNECTION_TYPE.FILE) {
-            const path = this.getCacheFile();
-            if (!fs.existsSync(path)) {
-                this.writeCacheFile({
-                    auto: {},
-                    data: [],
+        } else if (connection.getType() === CONNECTION_TYPE.POSTGRES) {
+            // first see if our versions table exists
+            const getVersionsQuery = "SELECT * FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename = '" + connection.getTable('table_versions') + "' LIMIT 1;"
+
+            const tableResult = await Model.query(getVersionsQuery);
+
+            if (tableResult.length === 0) {
+                console.log("Versions table not found, creating!");
+
+                const creationQuery = "CREATE TABLE " + connection.getTable('table_versions') + "(name VARCHAR(255), version INT)";
+                await Model.query(creationQuery);
+            }
+
+            // get version for this table
+            const getVersionQuery = "SELECT version FROM " + connection.getTable('table_versions') + " WHERE name = $1";
+
+            const versionResult = await Model.query(getVersionQuery, [connection.getTable(this.table)]);
+
+            if (versionResult.length === 0) {
+                console.log("Table " + this.table + " not found, creating");
+                let creationQuery = "CREATE TABLE " + connection.getTable(this.table) + "("
+
+                const fieldList = Object.keys(this.fields).map((fieldName) => {
+                    const data = this.fields[fieldName];
+
+                    const auto = data.meta && data.meta.includes(FIELD_META.AUTO)
+
+                    let fieldRow = "" + fieldName + " ";
+                    if (!auto) {
+                        fieldRow += Model._getColumnFromType(data.type);
+                    }
+
+                    if (data.meta) {
+                        if (data.meta.includes(FIELD_META.REQUIRED)) {
+                            fieldRow += ' NOT NULL'
+                        }
+                        if (data.meta.includes(FIELD_META.AUTO)) {
+                            fieldRow += ' SERIAL PRIMARY KEY';
+                        }
+                    }
+
+                    return fieldRow;
                 });
+
+                creationQuery += fieldList.join(", ");
+                creationQuery += ")";
+
+                await Model.query(creationQuery);
+
+                // add the version
+                const setVersionQuery = "INSERT INTO " + connection.getTable('table_versions') + "(version, name) VALUES($1, $2)";
+                await Model.query(setVersionQuery, [this.version, connection.getTable(this.table)]);
+            } else {
+                const version = versionResult[0].version;
+                if (version !== this.version) {
+                    console.log("Version mismatch on table " + this.table + ", expected " + this.version + " got " + version + " TOOD: Do something about this.");
+                }
             }
         } else {
             throw new Error(`Unexpected connection type ${connection.getType()}`);
