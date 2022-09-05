@@ -19,7 +19,7 @@ const assertThrows = async (fn, message) => {
     assert.strictEqual(error.message, message);
 }
 
-describe('model', () => {    
+describe('model->file', () => {    
     describe('setup', () => {
         it('should error when no default connection set', async () => {
             Connection.setDefaultConnection(null);
@@ -39,11 +39,11 @@ describe('model', () => {
         });
     });
 
-    describe('FILE', () => {
+    describe('cache', () => {
         const filePath = path.join(cachePath, "table.json");
 
-        beforeEach(() => {
-            const connection = Connection.fileConnection(cachePath);
+        beforeEach(async () => {
+            const connection = await Connection.fileConnection(cachePath);
             Connection.setDefaultConnection(connection);
         });
     
@@ -63,8 +63,8 @@ describe('model', () => {
         describe('general', () => {
             const filePath = path.join(cachePath, "table.json");
 
-            beforeEach(() => {
-                const connection = Connection.fileConnection(cachePath);
+            beforeEach(async () => {
+                const connection = await Connection.fileConnection(cachePath);
                 Connection.setDefaultConnection(connection);
             });
             
@@ -99,8 +99,8 @@ describe('model', () => {
         describe('FILE', () => {
             const filePath = path.join(cachePath, "table.json");
 
-            beforeEach(() => {
-                const connection = Connection.fileConnection(cachePath);
+            beforeEach(async () => {
+                const connection = await Connection.fileConnection(cachePath);
                 Connection.setDefaultConnection(connection);
             });
             
@@ -160,8 +160,8 @@ describe('model', () => {
         describe('FILE', () => {
             const filePath = path.join(cachePath, "table.json");
 
-            beforeEach(() => {
-                const connection = Connection.fileConnection(cachePath);
+            beforeEach(async () => {
+                const connection = await Connection.fileConnection(cachePath);
                 Connection.setDefaultConnection(connection);
             });
             
@@ -210,8 +210,8 @@ describe('model', () => {
     
     describe('search', () => {
         describe('FILE', () => {
-            beforeEach(() => {
-                const connection = Connection.fileConnection(cachePath);
+            beforeEach(async () => {
+                const connection = await Connection.fileConnection(cachePath);
                 Connection.setDefaultConnection(connection);
             });
             
@@ -409,7 +409,7 @@ describe('model', () => {
             let model;
 
             beforeEach(async () => {
-                const connection = Connection.fileConnection(cachePath);
+                const connection = await Connection.fileConnection(cachePath);
                 Connection.setDefaultConnection(connection);
                 model = new Model("table", {
                     foo: {
@@ -482,7 +482,7 @@ describe('model', () => {
             let model;
 
             beforeEach(async () => {
-                const connection = Connection.fileConnection(cachePath);
+                const connection = await Connection.fileConnection(cachePath);
                 Connection.setDefaultConnection(connection);
                 model = new Model("table", {
                     foo: {
@@ -546,7 +546,7 @@ describe('model', () => {
             let id2;
 
             beforeEach(async () => {
-                const connection = Connection.fileConnection(cachePath);
+                const connection = await Connection.fileConnection(cachePath);
                 Connection.setDefaultConnection(connection);
                 model = new Model("table", {
                     foo: {

@@ -1,13 +1,13 @@
 /**
- * Warning: This test requires an active and working mysql database. It expects a file, db.json, to exist with the following keys:
- * host, database, username, password
- * This file WILL truncate the entire database once it's done
+ * Warning: This test requires an active and working mysql database. It expects a file, db_mysql.json, to exist with the following keys:
+ * host, database, username, password, url
+ * This test WILL truncate the entire database once it's done
  */
 
  const assert = require('assert');
  
  const { Connection } = require('../src/connection');
- const dbAuth = require('./db.json');
+ const dbAuth = require('./db_mysql.json');
 
  function run(connection, query) {
     return new Promise((resolve) => {
@@ -23,40 +23,35 @@
     });
  }
  
- describe('connection', () => {
-    describe('MYSQL', () => {
-        it('should connect with a URL', async () => {
-            let connection
-            assert.doesNotThrow(() => {
-                connection = Connection.mysqlConnection({ url: dbAuth.url });
-            });
+ describe('connection->MySQL', () => {
+    it('should connect with a URL', async () => {
+        const connection = await Connection.mysqlConnection({ url: dbAuth.url });
 
-            // we need to wait for the connection to fully resolve itself before closing it
-            // or else we get an error and a test failure
-            await new Promise((resolve) => {
-                setTimeout(resolve, 50);
-            });
-
-            await connection.close();
+        // we need to wait for the connection to fully resolve itself before closing it
+        // or else we get an error and a test failure
+        await new Promise((resolve) => {
+            setTimeout(resolve, 50);
         });
 
-        it('should reconnect after timeout', async function() {
-            // we are waiting 3 seconds for timeout, make sure test does not timeout
-            this.timeout(5000);
-            connection = Connection.mysqlConnection({ url: dbAuth.url });
+        await connection.close();
+    });
 
-            query = "set session wait_timeout = 2";
-            await run(connection, query);
+    it('should reconnect after timeout', async function() {
+        // we are waiting 3 seconds for timeout, make sure test does not timeout
+        this.timeout(5000);
+        const connection = await Connection.mysqlConnection({ url: dbAuth.url });
 
-            await sleep(3000);
+        query = "set session wait_timeout = 2";
+        await run(connection, query);
 
-            assert.equal(connection.connection, null);
+        await sleep(3000);
 
-            // should recreate the connection
-            const dbConnection = connection.getConnection();
-            assert.notEqual(dbConnection, null);
+        assert.equal(connection.connection, null);
 
-            await connection.close();
-        });
+        // should recreate the connection
+        const dbConnection = connection.getConnection();
+        assert.notEqual(dbConnection, null);
+
+        await connection.close();
     });
 });

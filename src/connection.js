@@ -3,6 +3,7 @@ const fs = require('fs');
 const CONNECTION_TYPE = {
     MYSQL: 'connection/mysql',
     FILE: 'connection/file',
+    POSTGRES: 'connection/postgres',
 };
 
 let defaultConnection = null;
@@ -21,8 +22,10 @@ class Connection {
         this.data = data;
         this.prefix = prefix;
         this.data = data;
-        
-        this._createConnection();
+    }
+
+    init() {
+        return this._createConnection();
     }
 
     _createConnection() {
@@ -36,7 +39,6 @@ class Connection {
                 // break the url down into component pieces
 
                 const urlPieces = new URL(this.data.url);
-                delete this.data.url;
 
                 let { protocol, host, username, password, pathname } = urlPieces;
                 protocol = protocol.substr(0, protocol.length-1);
@@ -55,6 +57,9 @@ class Connection {
                 };
             }
 
+            // delete the url from the object to remove nulls
+            delete this.data.url;
+
             // don't attempt to load this until we actually need it
             const mysql = require('mysql2');
             const connection = mysql.createConnection(this.data);
@@ -65,8 +70,30 @@ class Connection {
                     console.log('Database server terminated the connection');
                     this.close();
                 } else {
-                    console.log(e);
+                    console.error(e);
                 }
+            });
+        } else if (this.type === CONNECTION_TYPE.POSTGRES) {
+            const { Client } = require('pg');
+            let client;
+
+            if (this.data.url) {
+                client = new Client({ connectionString: this.data.url });
+            } else {
+                // delete the url from the object to remove nulls
+                delete this.data.url;
+                client = new Client(this.data);
+            }
+
+            return new Promise((resolve, reject) => {
+                client.connect((error) => {
+                    if (error) {
+                        reject(error);
+                    } else {
+                        this.connection = client;
+                        resolve();
+                    }
+                });
             });
         }
     }
@@ -101,18 +128,34 @@ class Connection {
             if (connection) {
                 return connection.close();
             }
+        } else if (this.type === CONNECTION_TYPE.POSTGRES) {
+            if (connection) {
+                return connection.end();
+            }
         }
     }
 }
 
-Connection.fileConnection = (cacheDir) => {
-    return new Connection(CONNECTION_TYPE.FILE, { cacheDir });
+Connection.fileConnection = async (cacheDir) => {
+    const connection = new Connection(CONNECTION_TYPE.FILE, { cacheDir });
+    await connection.init();
+    return connection;
 }
 
-Connection.mysqlConnection = ({ host, username, password, database, url }) => {
-    return new Connection(CONNECTION_TYPE.MYSQL, {
+Connection.mysqlConnection = async ({ host, username, password, database, url }) => {
+    const connection = new Connection(CONNECTION_TYPE.MYSQL, {
         host, user: username, password, database, url,
     });
+    await connection.init();
+    return connection;
+}
+
+Connection.postgresConnection = async ({ host, username, password, database, port, url }) => {
+    const connection = new Connection(CONNECTION_TYPE.POSTGRES, {
+        host, user: username, password, database, port, url,
+    });
+    await connection.init();
+    return connection;
 }
 
 Connection.setDefaultConnection = setDefaultConnection;
