@@ -49,7 +49,7 @@
     
         const tableDropStatements = await Model.query(query);
 
-        for (const dropStatement of tableDropStatements) {
+        for (const dropStatement of tableDropStatements.rows) {
             await Model.query(dropStatement.drop);
         }
 
@@ -68,7 +68,7 @@
 
         const getTablesQuery = "SELECT * FROM pg_catalog.pg_tables WHERE schemaname = 'public'";
         const tables = await Model.query(getTablesQuery);
-        const tableMap = tables.reduce((obj, tableData) => {
+        const tableMap = tables.rows.reduce((obj, tableData) => {
             const name = tableData.tablename;
             return {
                 ...obj,
@@ -81,12 +81,12 @@
         assert.equal(tableNames.includes('test_1'), true, 'expected table list to contain "test_1"');
     });
 
-    /*it('should insert the correct version into the table', async () => {
+    it('should insert the correct version into the table', async () => {
         await model.initTable();
 
         const getVersionsQuery = "SELECT * FROM table_versions";
         const versions = await Model.query(getVersionsQuery);
-        const tableMap = versions.reduce((obj, tableData) => {
+        const tableMap = versions.rows.reduce((obj, tableData) => {
             const name = tableData.name;
             return {
                 ...obj,
@@ -151,7 +151,7 @@
         });
     });
 
-    it('should be able to search for all items', async () => {
+    /*it('should be able to search for all items', async () => {
         const id = await model.insert({
             foo: 4,
             bar: 'blah',

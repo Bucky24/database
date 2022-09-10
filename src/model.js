@@ -113,7 +113,7 @@ class Model {
                     } else {
                         result = await connection.getConnection().query(query);
                     }
-                    resolve(result.rows);
+                    resolve(result);
                 } catch (error) {
                     if (error.message.startsWith("syntax error")) {
                         reject(new Error("Syntax error for query " + query + ": " + error.message));
@@ -238,8 +238,9 @@ class Model {
             const getVersionsQuery = "SELECT * FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename = '" + connection.getTable('table_versions') + "' LIMIT 1;"
 
             const tableResult = await Model.query(getVersionsQuery);
+            let rows = tableResult.rows;
 
-            if (tableResult.length === 0) {
+            if (rows.length === 0) {
                 console.log("Versions table not found, creating!");
 
                 const creationQuery = "CREATE TABLE " + connection.getTable('table_versions') + "(name VARCHAR(255), version INT)";
@@ -250,8 +251,9 @@ class Model {
             const getVersionQuery = "SELECT version FROM " + connection.getTable('table_versions') + " WHERE name = $1";
 
             const versionResult = await Model.query(getVersionQuery, [connection.getTable(this.table)]);
+            rows = versionResult.rows;
 
-            if (versionResult.length === 0) {
+            if (rows.length === 0) {
                 console.log("Table " + this.table + " not found, creating");
                 let creationQuery = "CREATE TABLE " + connection.getTable(this.table) + "("
 
@@ -286,7 +288,7 @@ class Model {
                 const setVersionQuery = "INSERT INTO " + connection.getTable('table_versions') + "(version, name) VALUES($1, $2)";
                 await Model.query(setVersionQuery, [this.version, connection.getTable(this.table)]);
             } else {
-                const version = versionResult[0].version;
+                const version = rows[0].version;
                 if (version !== this.version) {
                     console.log("Version mismatch on table " + this.table + ", expected " + this.version + " got " + version + " TOOD: Do something about this.");
                 }
@@ -353,6 +355,14 @@ class Model {
             }
             
             return null;
+        } else if (connection.getType() === CONNECTION_TYPE.POSTGRES) {
+            const query = "SELECT * FROM " + connection.getTable(this.table) + " WHERE id = $1";
+            const result = await Model.query(query, [id]);
+            if (result.rows.length === 0) {
+                return null;
+            }
+
+            return this.processResult(result.rows[0]);
         } else {
             throw new Error(`Unexpected connection type ${connection.getType()}`);
         }
@@ -546,6 +556,23 @@ class Model {
             }
             
             this.writeCacheFile(data);
+        } else if (connection.getType() === CONNECTION_TYPE.POSTGRES) {
+            let query = "UPDATE " + connection.getTable(this.table) + " SET ";
+
+            const fieldRows = [];
+            const values = [];
+            let counter = 1;
+            Object.keys(fields).forEach((key) => {
+                fieldRows.push(`${key} = $${counter}`);
+                counter ++;
+                values.push(this.processForSave(fields[key], key));
+            });
+
+            query += fieldRows.join(", ");
+            query += " WHERE id = $" + counter;
+            values.push(id);
+
+            await Model.query(query, values);
         } else {
             throw new Error(`Unexpected connection type ${connection.getType()}`);
         }
@@ -630,6 +657,24 @@ class Model {
             this.writeCacheFile(data);
 
             return newId;
+        } else if (connection.getType() === CONNECTION_TYPE.POSTGRES) {
+            let query = "INSERT INTO " + connection.getTable(this.table) + "(";
+
+            const fieldList = [];
+            const valueList = [];
+            const valueKeys = [];
+
+            Object.keys(insertData).forEach((key, index) => {
+                const value = insertData[key];
+                fieldList.push(key);
+                valueList.push(this.processForSave(value, key));
+                valueKeys.push("$" + (index + 1));
+            });
+
+            query += fieldList.join(", ") + ") VALUES(" + valueKeys.join(", ") + ") RETURNING id";
+
+            const result = await Model.query(query, valueList);
+            return result.rows[0].id;
         } else {
             throw new Error(`Unexpected connection type ${connection.getType()}`);
         }
