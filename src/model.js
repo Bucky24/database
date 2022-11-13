@@ -349,7 +349,7 @@ class Model {
             const data = this.readCacheFile();
             for (let i=0;i<data.data.length;i++) {
                 const obj = data.data[i];
-                if (obj.id === id) {
+                if (obj.id == id) {
                     return this.processResult(obj);
                 }
             }
@@ -542,7 +542,7 @@ class Model {
             const results = [];
             for (let i=0;i<data.data.length;i++) {
                 const obj = data.data[i];
-                if (obj.id === id) {
+                if (obj.id == id) {
                     Object.keys(fields).forEach((key) => {
                         const fieldData = this.fields[key];
                         if (fields[key] === null) {
@@ -695,7 +695,7 @@ class Model {
             const results = [];
             for (let i=0;i<data.data.length;i++) {
                 const obj = data.data[i];
-                if (obj.id === id) {
+                if (obj.id == id) {
                     data.data.splice(i, 1);
                     break;
                 }

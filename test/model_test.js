@@ -205,6 +205,23 @@ describe('model->file', () => {
                     foo: {foo: 'bar'},
                 });
             });
+
+            it('should handle a string id', async () => {
+                const model = new Model("table", {
+                    foo: {
+                        type: FIELD_TYPE.JSON,
+                    },
+                });
+                await model.initTable();
+                const id = await model.insert({
+                    foo: { foo: 'bar' },
+                });
+                const data = await model.get('1');
+                assert.deepStrictEqual(data, {
+                    id,
+                    foo: {foo: 'bar'},
+                });
+            });
         });
     });
     
@@ -535,6 +552,23 @@ describe('model->file', () => {
                     foo: 'bar',
                 });
             });
+
+            it('should update data with a string id', async () => {
+                let data = await model.get(1);
+                assert.deepStrictEqual(data, {
+                    id: 1,
+                    foo: 'bar',
+                    bar: 'baz',
+                });
+                
+                await model.update('1', { bar: 'foo', foo: 'boo' });
+                data = await model.get(1);
+                assert.deepStrictEqual(data, {
+                    id: 1,
+                    foo: 'boo',
+                    bar: 'foo',
+                });
+            });
         });
     });
     
@@ -591,6 +625,18 @@ describe('model->file', () => {
                     foo: 'bar',
                     bar: 'baz',
                 });
+                data = await model.get(id2);
+                assert.deepStrictEqual(data, {
+                    id: id2,
+                    foo: 'foo',
+                    bar: 'bar',
+                });
+            });
+
+            it('should delete with a string id', async () => {
+                await model.delete(`${id1}`);
+                let data = await model.get(id1);
+                assert(data === null);
                 data = await model.get(id2);
                 assert.deepStrictEqual(data, {
                     id: id2,
