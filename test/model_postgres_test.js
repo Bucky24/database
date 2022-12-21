@@ -9,6 +9,19 @@
  const { Model, FIELD_META, FIELD_TYPE, ORDER } = require('../src/model');
  const { Connection } = require('../src/connection');
  const dbAuth = require('./db_postgres.json');
+
+ const modelFields = {
+    foo: {
+        type: FIELD_TYPE.INT,
+        meta: [FIELD_META.REQUIRED],
+    },
+    bar: {
+        type: FIELD_TYPE.STRING,
+    },
+    json: {
+        type: FIELD_TYPE.JSON,
+    }
+};
  
  describe('model->Postgres', () => {
     let connection;
@@ -27,18 +40,7 @@
 
         model = new Model(
             'test_1',
-            {
-                foo: {
-                    type: FIELD_TYPE.INT,
-                    meta: [FIELD_META.REQUIRED],
-                },
-                bar: {
-                    type: FIELD_TYPE.STRING,
-                },
-                json: {
-                    type: FIELD_TYPE.JSON,
-                }
-            },
+            modelFields,
             version,
         );
     });
@@ -151,7 +153,8 @@
         });
     });
 
-    /*it('should be able to search for all items', async () => {
+    it('should be able to search for all items', async () => {
+        await model.initTable();
         const id = await model.insert({
             foo: 4,
             bar: 'blah',
@@ -178,6 +181,7 @@
     });
 
     it('should delete rows as expected', async () => {
+        await model.initTable();
         const id = await model.insert({
             foo: -5,
             bar: 'delete test',
@@ -215,93 +219,11 @@
         assert.equal(result2.foo, false);
     });
 
-    it('should handle limit as expected', async () => {
-        await model.insert({ foo: true, bar: '1' });
-        await model.insert({ foo: true, bar: '2' });
-        await model.insert({ foo: true, bar: '3' });
-        await model.insert({ foo: true, bar: '4' });
-        await model.insert({ foo: true, bar: '5' });
-
-        const results = await model.search({}, null, 3);
-
-        assert.equal(results.length, 3);
-        assert.deepStrictEqual(results, [
-            {
-                id: 1,
-                foo: 1,
-                bar: '1',
-                json: null,
-            },
-            {
-                id: 2,
-                foo: 1,
-                bar: '2',
-                json: null,
-            },
-            {
-                id: 3,
-                foo: 1,
-                bar: '3',
-                json: null,
-            },
-        ]);
-    });
-
-    it('should order as expected', async () => {
-        await model.insert({ foo: true, bar: '1' });
-        await model.insert({ foo: true, bar: '2' });
-        await model.insert({ foo: true, bar: '3' });
-
-        let results = await model.search({}, { bar: ORDER.DESC });
-        assert.deepStrictEqual(results, [
-            {
-                id: 3,
-                foo: 1,
-                bar: '3',
-                json: null,
-            },
-            {
-                id: 2,
-                foo: 1,
-                bar: '2',
-                json: null,
-            },
-            {
-                id: 1,
-                foo: 1,
-                bar: '1',
-                json: null,
-            },
-        ]);
-
-        results = await model.search({}, { bar: ORDER.ASC });
-        assert.deepStrictEqual(results, [
-            {
-                id: 1,
-                foo: 1,
-                bar: '1',
-                json: null,
-            },
-            {
-                id: 2,
-                foo: 1,
-                bar: '2',
-                json: null,
-            },
-            {
-                id: 3,
-                foo: 1,
-                bar: '3',
-                json: null,
-            },
-        ]);
-    });
-
     describe('search', () => {
         it('should search for multiple values in a field', async () => {
-            await model.insert({ foo: true, bar: '1' });
-            await model.insert({ foo: true, bar: '2' });
-            await model.insert({ foo: true, bar: '3' });
+            await model.insert({ foo: 1, bar: '1' });
+            await model.insert({ foo: 2, bar: '2' });
+            await model.insert({ foo: 3, bar: '3' });
 
             let results = await model.search({ bar: ['1', '3']});
             assert.deepStrictEqual(results, [
@@ -313,11 +235,129 @@
                 },
                 {
                     id: 3,
-                    foo: 1,
+                    foo: 3,
                     bar: '3',
                     json: null,
                 },
             ]);
         });
-    });*/
+
+        it('should handle limit as expected', async () => {
+            await model.initTable();
+            await model.insert({ foo: 1, bar: '1' });
+            await model.insert({ foo: 2, bar: '2' });
+            await model.insert({ foo: 3, bar: '3' });
+            await model.insert({ foo: 4, bar: '4' });
+            await model.insert({ foo: 5, bar: '5' });
+    
+            const results = await model.search({}, null, 3);
+    
+            assert.equal(results.length, 3);
+            assert.deepStrictEqual(results, [
+                {
+                    id: 1,
+                    foo: 1,
+                    bar: '1',
+                    json: null,
+                },
+                {
+                    id: 2,
+                    foo: 2,
+                    bar: '2',
+                    json: null,
+                },
+                {
+                    id: 3,
+                    foo: 3,
+                    bar: '3',
+                    json: null,
+                },
+            ]);
+        });
+    
+        it('should order as expected', async () => {
+            await model.insert({ foo: 1, bar: '1' });
+            await model.insert({ foo: 2, bar: '2' });
+            await model.insert({ foo: 3, bar: '3' });
+    
+            let results = await model.search({}, { bar: ORDER.DESC });
+            assert.deepStrictEqual(results, [
+                {
+                    id: 3,
+                    foo: 3,
+                    bar: '3',
+                    json: null,
+                },
+                {
+                    id: 2,
+                    foo: 2,
+                    bar: '2',
+                    json: null,
+                },
+                {
+                    id: 1,
+                    foo: 1,
+                    bar: '1',
+                    json: null,
+                },
+            ]);
+    
+            results = await model.search({}, { bar: ORDER.ASC });
+            assert.deepStrictEqual(results, [
+                {
+                    id: 1,
+                    foo: 1,
+                    bar: '1',
+                    json: null,
+                },
+                {
+                    id: 2,
+                    foo: 2,
+                    bar: '2',
+                    json: null,
+                },
+                {
+                    id: 3,
+                    foo: 3,
+                    bar: '3',
+                    json: null,
+                },
+            ]);
+        });
+    });
+
+    describe('version conflict', () => {
+        it('should add new fields into the db', async () => {
+            const newModel = new Model(
+                'test_1',
+                {
+                    ...modelFields,
+                    second_field: {
+                        type: FIELD_TYPE.INT,
+                        meta: [FIELD_META.REQUIRED],
+                    },
+                    third_field: {
+                        type: FIELD_TYPE.STRING,
+                    },
+                },
+                version + 1,
+            );
+
+            await model.initTable();
+            await newModel.initTable();
+
+            let newFields = await Model.query("SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = 'test_1' order by ordinal_position asc");
+            newFields = newFields.rows;
+            assert.equal(newFields.length, 6);
+            assert.equal(newFields[4].column_name, "second_field");
+            assert.equal(newFields[4].is_nullable, "NO");
+            assert.equal(newFields[4].data_type, "integer");
+            assert.equal(newFields[5].column_name, "third_field");
+            assert.equal(newFields[5].is_nullable, "YES");
+            assert.equal(newFields[5].data_type, "text");
+
+            const versions = await Model.query("SELECT version FROM table_versions WHERE name = 'test_1'");
+            assert.equal(versions.rows[0].version, 2);
+        });
+    });
 });

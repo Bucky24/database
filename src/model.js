@@ -158,6 +158,21 @@ class Model {
             return field.meta.includes(meta);
         });
     }
+
+    static _getFieldCreationString(fieldName, data, ticks) {
+        let fieldRow = ticks + fieldName + ticks + " " + Model._getColumnFromType(data.type);
+
+        if (data.meta) {
+            if (data.meta.includes(FIELD_META.REQUIRED)) {
+                fieldRow += ' NOT NULL'
+            }
+            if (data.meta.includes(FIELD_META.AUTO)) {
+                fieldRow += ' AUTO_INCREMENT';
+            }
+        }
+
+        return fieldRow;
+    }
     
     async initTable() {
         const connection = Connection.getDefaultConnection();
@@ -196,23 +211,14 @@ class Model {
                 let creationQuery = "CREATE TABLE " + connection.getTable(this.table) + "("
 
                 let autoColumn = null;
-
                 const fieldList = Object.keys(this.fields).map((fieldName) => {
                     const data = this.fields[fieldName];
 
-                    let fieldRow = "`" + fieldName + "` " + Model._getColumnFromType(data.type);
-
-                    if (data.meta) {
-                        if (data.meta.includes(FIELD_META.REQUIRED)) {
-                            fieldRow += ' NOT NULL'
-                        }
-                        if (data.meta.includes(FIELD_META.AUTO)) {
-                            fieldRow += ' AUTO_INCREMENT';
-                            autoColumn = fieldName;
-                        }
+                    if (data.meta && data.meta.includes(FIELD_META.AUTO)) {
+                        autoColumn = fieldName;
                     }
 
-                    return fieldRow;
+                    return Model._getFieldCreationString(fieldName, data, '');
                 });
 
                 if (autoColumn) {
@@ -230,7 +236,36 @@ class Model {
             } else {
                 const version = versionResult[0].version;
                 if (version !== this.version) {
-                    console.log("Version mismatch on table " + this.table + ", expected " + this.version + " got " + version + " TOOD: Do something about this.");
+                    console.log("Version mismatch on table " + this.table + ", expected " + this.version + " got " + version);
+
+                    const fields = await Model.query("DESCRIBE " + connection.getTable(this.table));
+                    const dbFields = fields.map((field) => {
+                        return field.Field;
+                    });
+                    const localFields = Object.keys(this.fields);
+
+                    const missingInDb = [];
+                    for (const local of localFields) {
+                        if (!dbFields.includes(local)) {
+                            missingInDb.push(local);
+                        }
+                    }
+
+                    if (missingInDb.length > 0) {
+                        const fieldStrings = [];
+                        for (const missing of missingInDb) {
+                            const data = this.fields[missing];
+                            fieldStrings.push("ADD COLUMN " + Model._getFieldCreationString(missing, data, '`'));
+                        }
+
+                        const query = "ALTER TABLE " + connection.getTable(this.table) + " " + fieldStrings.join(", ");
+                        await Model.query(query);
+                    }
+                    await Model.query(
+                        "UPDATE " + connection.getTable('table_versions') + " SET version  = ? WHERE name = ?",
+                        [this.version, connection.getTable(this.table)],
+                    );
+                    console.log("Version mismatch resolved.");
                 }
             }
         } else if (connection.getType() === CONNECTION_TYPE.POSTGRES) {
@@ -290,7 +325,36 @@ class Model {
             } else {
                 const version = rows[0].version;
                 if (version !== this.version) {
-                    console.log("Version mismatch on table " + this.table + ", expected " + this.version + " got " + version + " TOOD: Do something about this.");
+                    console.log("Version mismatch on table " + this.table + ", expected " + this.version + " got " + version);
+
+                    const fields = await Model.query("SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = '" + connection.getTable(this.table) + "' order by ordinal_position asc");
+                    const dbFields = fields.rows.map((field) => {
+                        return field.column_name;
+                    });
+                    const localFields = Object.keys(this.fields);
+
+                    const missingInDb = [];
+                    for (const local of localFields) {
+                        if (!dbFields.includes(local)) {
+                            missingInDb.push(local);
+                        }
+                    }
+
+                    if (missingInDb.length > 0) {
+                        const fieldStrings = [];
+                        for (const missing of missingInDb) {
+                            const data = this.fields[missing];
+                            fieldStrings.push("ADD COLUMN " + Model._getFieldCreationString(missing, data, ''));
+                        }
+
+                        const query = "ALTER TABLE " + connection.getTable(this.table) + " " + fieldStrings.join(", ");
+                        await Model.query(query);
+                    }
+                    await Model.query(
+                        "UPDATE " + connection.getTable('table_versions') + " SET version  = $1 WHERE name = $2",
+                        [this.version, connection.getTable(this.table)],
+                    );
+                    console.log("Version mismatch resolved.");
                 }
             }
         } else {
@@ -386,7 +450,6 @@ class Model {
         
         if (connection.getType() === CONNECTION_TYPE.MYSQL) {
             let query = "SELECT * FROM " + connection.getTable(this.table);
-            
 
             const fieldList = [];
             const values = [];
@@ -497,6 +560,67 @@ class Model {
             }
             
             return results;
+        } else if (connection.getType() === CONNECTION_TYPE.POSTGRES) {
+            let query = "SELECT * FROM " + connection.getTable(this.table);
+
+            const fieldList = [];
+            const values = [];
+            let curNum = 1;
+
+            const getNumParam = () => {
+                const param = '$' + curNum;
+                curNum++;
+                return param;
+            }
+
+            Object.keys(queryData).forEach((key) => {
+                const value = queryData[key];
+                if (Array.isArray(value)) {
+                    const questionList = [];
+                    for (const item of value) {
+                        questionList.push(getNumParam());
+                        values.push(item);
+                    }
+                    fieldList.push(`${key} in (${questionList.join(', ')})`);
+                } else {
+                    fieldList.push(`${key} = ${getNumParam()}`);
+                    values.push(queryData[key]);
+                }
+            });
+
+            if (fieldList.length > 0) {
+                query += " WHERE " + fieldList.join(" AND ");
+            }
+
+            if (order) {
+                const orderList = [];
+                for (const field in order) {
+                    const direction = order[field];
+                    let directionStr = '';
+                    if (direction === ORDER.ASC) {
+                        directionStr = 'ASC';
+                    } else if (direction === ORDER.DESC) {
+                        directionStr = 'DESC';
+                    }
+                    // would love to parameterize this but it crashes if I do
+                    orderList.push(`${field} ${directionStr}`);
+                    //values.push(field);
+                }
+                query += " ORDER BY " + orderList.join(", ");
+            } else {
+                query += " ORDER BY id asc";
+            }
+
+            if (limit) {
+                query += " LIMIT " + getNumParam();
+                values.push(limit.toString());
+            }
+
+            const results = await Model.query(query, values);
+
+            return results.rows.map((result) => {
+                return this.processResult(result);
+            });
         } else {
             throw new Error(`Unexpected connection type ${connection.getType()}`);
         }
@@ -702,6 +826,9 @@ class Model {
             }
             
             this.writeCacheFile(data);
+        } else if (connection.getType() === CONNECTION_TYPE.POSTGRES) {
+            const query = "DELETE FROM " + connection.getTable(this.table) + " WHERE id = $1";
+            await Model.query(query, [id]);
         } else {
             throw new Error(`Unexpected connection type ${connection.getType()}`);
         }

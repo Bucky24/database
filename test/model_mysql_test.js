@@ -9,6 +9,19 @@
  const { Model, FIELD_META, FIELD_TYPE, ORDER } = require('../src/model');
  const { Connection } = require('../src/connection');
  const dbAuth = require('./db_mysql.json');
+
+ const modelFields = {
+    foo: {
+        type: FIELD_TYPE.INT,
+        meta: [FIELD_META.REQUIRED],
+    },
+    bar: {
+        type: FIELD_TYPE.STRING,
+    },
+    json: {
+        type: FIELD_TYPE.JSON,
+    }
+};
  
  describe('model->MySQL', () => {
     let connection;
@@ -26,18 +39,7 @@
 
         model = new Model(
             'test_1',
-            {
-                foo: {
-                    type: FIELD_TYPE.INT,
-                    meta: [FIELD_META.REQUIRED],
-                },
-                bar: {
-                    type: FIELD_TYPE.STRING,
-                },
-                json: {
-                    type: FIELD_TYPE.JSON,
-                }
-            },
+            modelFields,
             version,
         );
     });
@@ -317,6 +319,40 @@
                     json: null,
                 },
             ]);
+        });
+    });
+
+    describe('version conflict', () => {
+        it('should add new fields into the db', async () => {
+            const newModel = new Model(
+                'test_1',
+                {
+                    ...modelFields,
+                    second_field: {
+                        type: FIELD_TYPE.INT,
+                        meta: [FIELD_META.REQUIRED],
+                    },
+                    third_field: {
+                        type: FIELD_TYPE.STRING,
+                    },
+                },
+                version + 1,
+            );
+
+            await model.initTable();
+            await newModel.initTable();
+
+            const newFields = await Model.query("DESCRIBE test_1");
+            assert.equal(newFields.length, 6);
+            assert.equal(newFields[4].Field, "second_field");
+            assert.equal(newFields[4].Null, "NO");
+            assert.equal(newFields[4].Type, "int");
+            assert.equal(newFields[5].Field, "third_field");
+            assert.equal(newFields[5].Null, "YES");
+            assert.equal(newFields[5].Type, "text");
+
+            const versions = await Model.query("SELECT version FROM table_versions WHERE name = 'test_1'");
+            assert.equal(versions[0].version, 2);
         });
     });
 });

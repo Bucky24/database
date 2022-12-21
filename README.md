@@ -117,6 +117,7 @@ Allows creating a new Model for use in your program. It's recommended that you c
 Note that the Model will automatically add an "id" field with type of FIELD_TYPE.INT that is a required auto-increment field. You can override this field if you desire.
 
 Also note that you must call `initTable` on the new Model and wait for it to finish before you can use the model. This ensures that all tables exist in the chosen data system.
+
 #### Field
 
 A Field is an object with the following parameters:
@@ -273,3 +274,7 @@ const filteredUserObject = userModel.filterForExport(userObject);
 // at this point the password has been removed
 console.log(filteredUserObject);
 ```
+
+### Table Changes
+
+If you need to add new fields to a Model, add them to the list then bump the version number. The system will automatically add the new columns the next time `initTable` is called.
