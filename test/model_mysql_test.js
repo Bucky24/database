@@ -332,6 +332,17 @@
         assert.deepStrictEqual(result, [{ id: 1, foo: 1 }]);
     });
 
+    it('should be able to search on null value', async () => {
+        await model.initTable();
+        const id = await model.insert({
+            foo: -5,
+        });
+
+        const rows = await model.search({ bar: null });
+        
+        assert.deepStrictEqual(rows, [{ id, foo: -5, bar: null, json: null }]);
+    });
+
     describe('search', () => {
         it('should search for multiple values in a field', async () => {
             await model.insert({ foo: true, bar: '1' });
