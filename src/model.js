@@ -470,6 +470,8 @@ class Model {
                         values.push(item);
                     }
                     fieldList.push(`${key} in (${questionList.join(', ')})`);
+                } else if (value === null) {
+                    fieldList.push(`${key} is null`);
                 } else {
                     fieldList.push(`${key} = ?`);
                     values.push(queryData[key]);

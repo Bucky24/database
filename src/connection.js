@@ -66,7 +66,7 @@ class Connection {
             this.connection = connection;
 
             this.connection.on('error', (e) => {
-                if (e.message.includes('Connection lost') || e.message.includes('The client was disconnected')) {
+                if (e.message.includes('Connection lost') || e.message.includes('The client was disconnected' || e.message.includes('read ECONNRESET'))) {
                     console.log('Database server terminated the connection');
                     this.close();
                 } else {
