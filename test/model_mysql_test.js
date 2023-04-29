@@ -298,6 +298,40 @@
         ]);
     });
 
+    it('should silently discard any field that is not in the fields data', async () => {
+        const model = new Model(
+            'test_1',
+            {
+                foo: {
+                    type: FIELD_TYPE.INT,
+                    meta: [FIELD_META.REQUIRED],
+                },
+                bar: {
+                    type: FIELD_TYPE.STRING,
+                },
+            },
+            1,
+        );
+        await model.initTable();
+        await model.insert({ foo: true, bar: '1' });
+
+        // second model without bar, should return data without bar
+        const model2 = new Model(
+            'test_1',
+            {
+                foo: {
+                    type: FIELD_TYPE.INT,
+                    meta: [FIELD_META.REQUIRED],
+                },
+            },
+            2,
+        );
+
+        const result = await model2.search({});
+
+        assert.deepStrictEqual(result, [{ id: 1, foo: 1 }]);
+    });
+
     describe('search', () => {
         it('should search for multiple values in a field', async () => {
             await model.insert({ foo: true, bar: '1' });
@@ -346,7 +380,12 @@
             assert.equal(newFields.length, 6);
             assert.equal(newFields[4].Field, "second_field");
             assert.equal(newFields[4].Null, "NO");
-            assert.equal(newFields[4].Type, "int");
+            try {
+                assert.equal(newFields[4].Type, "int");
+            } catch (error) {
+                // try int(11)
+                assert.equal(newFields[4].Type, "int(11)");
+            }
             assert.equal(newFields[5].Field, "third_field");
             assert.equal(newFields[5].Null, "YES");
             assert.equal(newFields[5].Type, "text");

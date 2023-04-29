@@ -377,8 +377,16 @@ class Model {
         Object.keys(result).forEach((key) => {
             const value = result[key];
             const data = this.getFieldData(key);
+            if (!data) {
+                // remove the field-it's not part of our fieldset anymore
+                delete result[key];
+                return;
+            }
             if (data.type === FIELD_TYPE.JSON) {
                 result[key] = JSON.parse(value);
+            } else if (data.type === FIELD_TYPE.BOOLEAN) {
+                // assume it's 1 or 0
+                result[key] = !!value;
             }
         });
 
