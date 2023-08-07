@@ -6,15 +6,11 @@
 
  const assert = require('assert');
  
- const { Connection } = require('../src/connection');
+ const Connection = require('../src/connections');
  const dbAuth = require('./db_mysql.json');
 
  function run(connection, query) {
-    return new Promise((resolve) => {
-        connection.getConnection().query(query, (error, results, fields) => {
-            resolve(results);
-        });
-    });
+    return connection._query(query);
  }
 
  function sleep(ms) {
@@ -40,6 +36,7 @@
         // we are waiting 3 seconds for timeout, make sure test does not timeout
         this.timeout(5000);
         const connection = await Connection.mysqlConnection({ url: dbAuth.url });
+        await connection.init();
 
         query = "set session wait_timeout = 2";
         await run(connection, query);
