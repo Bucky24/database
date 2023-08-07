@@ -94,7 +94,7 @@ class MysqlConnection extends Connection {
         const connection = mysql.createConnection(this.connectionData);
 
         connection.on('error', (e) => {
-            if (e.message.includes('Connection lost') || e.message.includes('The client was disconnected')) {
+            if (e.message.includes('Connection lost') || e.message.includes('The client was disconnected') || e.message.includes('read ECONNRESET')) {
                 this.log('Database server terminated the connection');
                 this.close();
             } else {
@@ -111,6 +111,21 @@ class MysqlConnection extends Connection {
         if (connection) {
             return connection.close();
         }
+    }
+
+    static _getFieldCreationString(fieldName, data, ticks) {
+        let fieldRow = ticks + fieldName + ticks + " " + this._getColumnFromType(data.type);
+
+        if (data.meta) {
+            if (data.meta.includes(FIELD_META.REQUIRED)) {
+                fieldRow += ' NOT NULL'
+            }
+            if (data.meta.includes(FIELD_META.AUTO)) {
+                fieldRow += ' AUTO_INCREMENT';
+            }
+        }
+
+        return fieldRow;
     }
 
     async initializeTable(tableName, fields, version) {
@@ -134,23 +149,14 @@ class MysqlConnection extends Connection {
             let creationQuery = "CREATE TABLE `" + this.getTable(tableName) + "` ("
 
             let autoColumn = null;
-
             const fieldList = Object.keys(fields).map((fieldName) => {
                 const data = fields[fieldName];
 
-                let fieldRow = "`" + fieldName + "` " + MysqlConnection._getColumnFromType(data.type);
-
-                if (data.meta) {
-                    if (data.meta.includes(FIELD_META.REQUIRED)) {
-                        fieldRow += ' NOT NULL'
-                    }
-                    if (data.meta.includes(FIELD_META.AUTO)) {
-                        fieldRow += ' AUTO_INCREMENT';
-                        autoColumn = fieldName;
-                    }
+                if (data.meta && data.meta.includes(FIELD_META.AUTO)) {
+                    autoColumn = fieldName;
                 }
 
-                return fieldRow;
+                return MysqlConnection._getFieldCreationString(fieldName, data, '');
             });
 
             if (autoColumn) {
@@ -168,7 +174,36 @@ class MysqlConnection extends Connection {
         } else {
             const dbVersion = versionResult[0].version;
             if (dbVersion !== version) {
-                this.log("Version mismatch on table " + tableName + ", expected " + version + " got " + dbVersion + " TOOD: Do something about this.");
+                this.log("Version mismatch on table " + tableName + ", expected " + version + " got " + dbVersion);
+
+                const oldFields = await this._query("DESCRIBE `" + this.getTable(tableName) + "`");
+
+                const dbFields = oldFields.map((field) => {
+                    return field.Field;
+                });
+                const localFields = Object.keys(fields);
+                const missingInDb = [];
+                for (const local of localFields) {
+                    if (!dbFields.includes(local)) {
+                        missingInDb.push(local);
+                    }
+                }
+
+                if (missingInDb.length > 0) {
+                    const fieldStrings = [];
+                    for (const missing of missingInDb) {
+                        const data = fields[missing];
+                        fieldStrings.push("ADD COLUMN " + MysqlConnection._getFieldCreationString(missing, data, '`'));
+                    }
+
+                    const query = "ALTER TABLE `" + this.getTable(tableName) + "` " + fieldStrings.join(", ");
+                    await this._query(query);
+                }
+                await this._query(
+                    "UPDATE " + this.getTable('table_versions') + " SET version  = ? WHERE name = ?",
+                    [version, this.getTable(tableName)],
+                );
+                this.log("Version mismatch resolved.");
             }
         }
     }

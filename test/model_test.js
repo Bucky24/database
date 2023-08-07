@@ -184,6 +184,40 @@ describe('model', async () => {
                         foo: { foo: 'bar' },
                     });
                 });
+
+                it('should silently discard any field that is not in the fields data', async () => {
+                    const model = new Model(
+                        'test_1',
+                        {
+                            foo: {
+                                type: FIELD_TYPE.INT,
+                                meta: [FIELD_META.REQUIRED],
+                            },
+                            bar: {
+                                type: FIELD_TYPE.STRING,
+                            },
+                        },
+                        1,
+                    );
+                    await model.init();
+                    await model.insert({ foo: 1, bar: '1' });
+            
+                    // second model without bar, should return data without bar
+                    const model2 = new Model(
+                        'test_1',
+                        {
+                            foo: {
+                                type: FIELD_TYPE.INT,
+                                meta: [FIELD_META.REQUIRED],
+                            },
+                        },
+                        2,
+                    );
+            
+                    const result = await model2.search({});
+            
+                    assert.deepStrictEqual(result, [{ id: 1, foo: 1 }]);
+                });
             });
             
             describe('get', () => {
@@ -650,6 +684,58 @@ describe('model', async () => {
                 });
             });
 
+            describe('version conflict', () => {
+                it('should handle adding new fields', async () => {
+                    const model = new Model("table", {
+                        foo: {
+                            type: FIELD_TYPE.STRING,
+                            meta: [FIELD_META.REQUIRED],
+                        },
+                        bar: {
+                            type: FIELD_TYPE.JSON,
+                        },
+                    }, 1);
+                    const newModel = new Model(
+                        'table',
+                        {
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                                meta: [FIELD_META.REQUIRED],
+                            },
+                            bar: {
+                                type: FIELD_TYPE.JSON,
+                            },
+                            second_field: {
+                                type: FIELD_TYPE.INT,
+                                meta: [FIELD_META.REQUIRED],
+                            },
+                            third_field: {
+                                type: FIELD_TYPE.STRING,
+                            },
+                        },
+                        2,
+                    );
+        
+                    await model.init();
+                    await newModel.init();
+
+                    await newModel.insert({
+                        foo: 'bar',
+                        second_field: 5,
+                    });
+
+                    const rows = await newModel.search();
+                    assert.deepStrictEqual(rows, [
+                        {
+                            foo: 'bar',
+                            bar: null,
+                            second_field: 5,
+                            third_field: null,
+                            id: 1,
+                        },
+                    ]);
+                });
+            });
         });
     }
 

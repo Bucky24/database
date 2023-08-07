@@ -85,6 +85,21 @@ class PostgresConnection extends Connection {
         });
     }
 
+    static _getFieldCreationString(fieldName, data, ticks) {
+        let fieldRow = ticks + fieldName + ticks + " " + PostgresConnection._getColumnFromType(data.type);
+
+        if (data.meta) {
+            if (data.meta.includes(FIELD_META.REQUIRED)) {
+                fieldRow += ' NOT NULL'
+            }
+            if (data.meta.includes(FIELD_META.AUTO)) {
+                fieldRow += ' AUTO_INCREMENT';
+            }
+        }
+
+        return fieldRow;
+    }
+
     async initializeTable(tableName, fields, version) {
         // first see if our versions table exists
         const getVersionsQuery = "SELECT * FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename = '" + this.getTable('table_versions') + "' LIMIT 1;"
@@ -142,7 +157,37 @@ class PostgresConnection extends Connection {
         } else {
             const dbVersion = rows[0].version;
             if (dbVersion !== version) {
-                console.log("Version mismatch on table " + tableName + ", expected " + version + " got " + dbVersion + " TOOD: Do something about this.");
+                console.log("Version mismatch on table " + tableName + ", expected " + version + " got " + dbVersion);
+
+                const oldFields = await this._query("SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = '" + this.getTable(tableName) + "' order by ordinal_position asc");
+                const dbFields = oldFields.rows.map((field) => {
+                    return field.column_name;
+                });
+                const localFields = Object.keys(fields);
+
+                const missingInDb = [];
+                for (const local of localFields) {
+                    if (!dbFields.includes(local)) {
+                        missingInDb.push(local);
+                    }
+                }
+
+
+                if (missingInDb.length > 0) {
+                    const fieldStrings = [];
+                    for (const missing of missingInDb) {
+                        const data = fields[missing];
+                        fieldStrings.push("ADD COLUMN " + PostgresConnection._getFieldCreationString(missing, data, '\"'));
+                    }
+
+                    const query = "ALTER TABLE \"" + this.getTable(tableName) + "\" " + fieldStrings.join(", ");
+                    await this._query(query);
+                }
+                await this._query(
+                    "UPDATE " + this.getTable('table_versions') + " SET version  = $1 WHERE name = $2",
+                    [version, this.getTable(tableName)],
+                );
+                console.log("Version mismatch resolved.");
             }
         }
     }

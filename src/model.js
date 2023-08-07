@@ -25,44 +25,6 @@ class Model {
         this.version = version;
     }
 
-    static async query(query, bind) {
-        throw new Error("bad fnc");
-        const connection = getDefaultConnection();
-        
-        if (connection === null) {
-            throw new Error('No default connection set');
-        }
-
-        // check for undefined bind
-        if (bind) {
-            for (const item of bind) {
-                if (item === undefined) {
-                    throw new Error(`Got undefined bind for query ${query} with bind of ${bind}`);
-                }
-            }
-        }
-
-        if (connection.getType() === CONNECTION_TYPE.POSTGRES) {
-            return new Promise(async (resolve, reject) => {
-                try {
-                    let result;
-                    if (bind) {
-                        result = await connection.getConnection().query(query, bind);
-                    } else {
-                        result = await connection.getConnection().query(query);
-                    }
-                    resolve(result);
-                } catch (error) {
-                    if (error.message.startsWith("syntax error")) {
-                        reject(new Error("Syntax error for query " + query + ": " + error.message));
-                    } else {
-                        reject(error);
-                    }
-                }
-            });
-        }
-    }
-
     static _getColumnFromType(type) {
         if (type === FIELD_TYPE.INT) {
             return 'INT';
@@ -94,6 +56,21 @@ class Model {
             return field.meta.includes(meta);
         });
     }
+
+    static _getFieldCreationString(fieldName, data, ticks) {
+        let fieldRow = ticks + fieldName + ticks + " " + Model._getColumnFromType(data.type);
+
+        if (data.meta) {
+            if (data.meta.includes(FIELD_META.REQUIRED)) {
+                fieldRow += ' NOT NULL'
+            }
+            if (data.meta.includes(FIELD_META.AUTO)) {
+                fieldRow += ' AUTO_INCREMENT';
+            }
+        }
+
+        return fieldRow;
+    }
     
     async init() {
         const connection = getDefaultConnection();
@@ -120,8 +97,16 @@ class Model {
         Object.keys(result).forEach((key) => {
             const value = result[key];
             const data = this.getFieldData(key);
+            if (!data) {
+                // remove the field-it's not part of our fieldset anymore
+                delete result[key];
+                return;
+            }
             if (data.type === FIELD_TYPE.JSON) {
                 result[key] = JSON.parse(value);
+            } else if (data.type === FIELD_TYPE.BOOLEAN) {
+                // assume it's 1 or 0
+                result[key] = !!value;
             }
         });
 
@@ -153,19 +138,9 @@ class Model {
         }
 
         return result[0];
-        
-        if (connection.getType() === CONNECTION_TYPE.POSTGRES) {
-            const query = "SELECT * FROM " + connection.getTable(this.table) + " WHERE id = $1";
-            const result = await Model.query(query, [id]);
-            if (result.rows.length === 0) {
-                return null;
-            }
-
-            return this.processResult(result.rows[0]);
-        }
     }
     
-    async search(queryData, order = null, limit = null) {
+    async search(queryData = {}, order = null, limit = null) {
         const connection = getDefaultConnection();
         
         if (connection === null) {

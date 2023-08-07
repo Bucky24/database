@@ -275,3 +275,7 @@ const filteredUserObject = userModel.filterForExport(userObject);
 // at this point the password has been removed
 console.log(filteredUserObject);
 ```
+
+### Table Changes
+
+If you need to add new fields to a Model, add them to the list then bump the version number. The system will automatically add the new columns the next time `initTable` is called.
