@@ -5,7 +5,7 @@ If you've found this, there are probably better modules for this with lots of fa
 
 # Usage
 
-There are two steps to using the module. The first is to setup a connection, and the second is to create models to actually manipulate the data.
+There are two steps to using the module. The first is to setup a connection, and the second is to create models to actually manipulate the data. You can do these in the same file or different ones. See the examples for examples.
 
 ## Connection
 
