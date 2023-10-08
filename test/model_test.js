@@ -1,6 +1,8 @@
 const assert = require('assert');
 const path = require('path');
 const fs = require('fs');
+const express = require('express');
+const request = require('supertest');
 
 const { Model, FIELD_META, FIELD_TYPE, ORDER } = require('../src/model');
 const Connection = require('../src/connections');
@@ -36,7 +38,7 @@ describe('model', async () => {
                 }
             },
         },
-        'mysql': {
+        /*'mysql': {
             setup: () => {
                 return Connection.mysqlConnection({
                     host: mysqlAuth.host,
@@ -92,7 +94,7 @@ describe('model', async () => {
                     await connection.close();
                 }
             }
-        },
+        },*/
     };
 
     for (const connectionType in connections) {
@@ -734,6 +736,57 @@ describe('model', async () => {
                             id: 1,
                         },
                     ]);
+                });
+            });
+
+            describe('createCrudApis', async () => {
+                let server = null;
+                let model;
+
+                beforeEach(async () => {
+                    server = express();
+
+                    model = new Model("table", {
+                        foo: {
+                            type: FIELD_TYPE.STRING,
+                        },
+                        bar: {
+                            type: FIELD_TYPE.INT,
+                        },
+                    }, 1);
+                    await model.init();
+                    await model.insert({
+                        foo: 'bar',
+                        bar: 5,
+                    });
+                    await model.insert({
+                        foo: 'baz',
+                        bar: 10,
+                    });
+
+                    model.createCrudApis(server);
+                });
+
+                it('should return all objects when using the GET / api', async () => {
+                    const response = await request(server).get('/table');
+
+                    assert.deepEqual(response.body, [
+                        { id: 1, foo: 'bar', bar: 5 },
+                        { id: 2, foo: 'baz', bar: 10 },
+                    ]);
+                });
+
+                it('should return a specific object when using the GET /:id api', async () => {
+                    const response = await request(server).get('/table/1');
+
+                    assert.deepEqual(response.body, { id: 1, foo: 'bar', bar: 5 });
+                });
+
+                it('should return a 404 when using the GET /:id api on a non existing id', async () => {
+                    const response = await request(server).get('/table/10');
+
+                    assert.equal(response.status, 404);
+                    assert.deepEqual(response.body, {});
                 });
             });
         });

@@ -25,6 +25,75 @@ class Model {
         this.version = version;
     }
 
+    createCrudApis(app, options = {}) {
+        const processBody = (req, res) => {
+            const missingFields = [];
+            for (const field of this.fieldList) {
+                const fieldData = this.getFieldData(field);
+
+                if (req.body[field] === undefined && fieldData.meta.includes(FIELD_META.REQUIRED)) {
+                    missingFields.push(field);
+                }
+            }
+
+            const extraFields = [];
+            for (const field in req.body) {
+                if (!this.fieldList.includes(field)) {
+                    extraFields.push(field);
+                }
+            }
+
+            if (missingFields.length > 0 || extraFields.length > 0) {
+                res.status(400).json({
+                    missingFields,
+                    extraFields,
+                });
+                return false;
+            }
+
+            return true;
+        }
+        app.get('/' + this.table, async (req, res) => {
+            const objects = await this.search({});
+            const filteredObjects = this.filterForExport(objects);
+
+            res.status(200).json(filteredObjects);
+        });
+
+        app.get('/' + this.table + "/:id", async (req, res) => {
+            const object = await this.get(req.params.id);
+            if (!object) {
+                res.status(404).end();
+                return;
+            }
+            const filteredObject = this.filterForExport(object);
+
+            res.status(200).json(filteredObject);
+        });
+
+        app.post('/' + this.table, async (req, res) => {
+            if (!processBody(req, res)) {
+                return;
+            }
+
+            const id = await this.insert(req.body);
+
+            res.status(200).json({
+                id,
+            });
+        });
+
+        app.put('/' + this.table + '/:id', async (req, res) => {
+            if (!processBody(req, res)) {
+                return;
+            }
+
+            const id = await this.update(id, req.body);
+
+            res.status(200).end();
+        });
+    }
+
     static _getColumnFromType(type) {
         if (type === FIELD_TYPE.INT) {
             return 'INT';
