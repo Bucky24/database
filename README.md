@@ -104,19 +104,20 @@ const connection = Connection.getDefaultConnection();
 
 Models contain the code to actually setup and manipulate data.
 
-### Constructor
+### Model.create
 
-Allows creating a new Model for use in your program. It's recommended that you create these as singletons.
+Allows creating a new Model for use in your program. It's recommended that you create these as singletons. The following parameters must be passed in as a settings object.
 
 | Param | Type | Description |
 |---|---|---|
-| tableName | String | Name of the table to manipulate |
+| table | String | Name of the table to manipulate |
 | fields | Object | Keys being the name of the field, and values being a Field object |
 | version | Integer | Version of the table structure. Unused currently, though it is stored in a versions table in the database |
 
 Note that the Model will automatically add an "id" field with type of FIELD_TYPE.INT that is a required auto-increment field. You can override this field if you desire.
 
 Also note that you must call `init` on the new Model and wait for it to finish before you can use the model. This ensures that all tables exist in the chosen data system.
+
 #### Field
 
 A Field is an object with the following parameters:
@@ -129,12 +130,16 @@ A Field is an object with the following parameters:
 Example:
 
 ```
-const tableModel = new Model("sample_table", {
-    field1: {
-        type: FIELD_TYPE.STRING,
-        meta: [FIELD_META.REQUIRED, FIELD_META.AUTO],
+const tableModel = await Model.create({
+    table: "sample_table",
+    fields: {
+        field1: {
+            type: FIELD_TYPE.STRING,
+            meta: [FIELD_META.REQUIRED, FIELD_META.AUTO],
+        },
     },
-}, 1);
+    version: 1,
+});
 ```
 
 #### FIELD_TYPE
@@ -258,13 +263,17 @@ This method takes in a data object and returns a new object with all appropriate
 Example:
 
 ```
-const userModel = new Model("user", {
-    password: {
-        meta: [FIELD_META.REQUIRED, FIELD_META.FILTERED],
+const userModel = await Model.create({
+    table: "user",
+    fields: {
+        password: {
+            meta: [FIELD_META.REQUIRED, FIELD_META.FILTERED],
+        },
+        email: {
+            meta: [FIELD_META.REQUIRED],
+        },
     },
-    email: {
-        meta: [FIELD_META.REQUIRED],
-    },
+    version: 1,
 });
 const userObject = {
     password: 'a_password_hash',

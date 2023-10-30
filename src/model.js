@@ -1,28 +1,53 @@
-const path = require('path');
-const fs = require('fs');
+const { object, string, number, lazy, mixed, array } = require("yup");
 
 const { getDefaultConnection, FIELD_TYPE, FIELD_META, ORDER } = require('./connections');
 
-class Model {
-    constructor(table, fields, version) {
-        this.table = table;
-        this.fields = {
-            id: {
-                type: FIELD_TYPE.INT,
-                meta: [
-                    FIELD_META.AUTO,
-                ],
-            },
-            ...fields,
-        };
-        this.fieldList = Object.keys(this.fields).map((key) => {
-            const field = this.fields[key];
-            return {
-                ...field,
-                id: key,
-            };
+const modelSchema = object({
+    table: string().required(),
+    fields: lazy((obj) => {
+        return object({
+            ...Object.keys(obj).reduce((obj, key) => {
+                return {
+                    ...obj,
+                    [key]: object({
+                        type: mixed().oneOf(Object.values(FIELD_TYPE)).required(),
+                        meta: array().of(mixed().oneOf(Object.values(FIELD_META)).required()),
+                    }),
+                };
+            }, {}),
         });
-        this.version = version;
+    }),
+    version: number().required().integer(),
+});
+
+class Model {
+    static async create(settings) {
+        try {
+            const { table, fields, version } = await modelSchema.validate(settings);
+            const model = new Model();
+            model.table = table;
+            model.fields = {
+                id: {
+                    type: FIELD_TYPE.INT,
+                    meta: [
+                        FIELD_META.AUTO,
+                    ],
+                },
+                ...fields,
+            };
+            model.fieldList = Object.keys(model.fields).map((key) => {
+                const field = model.fields[key];
+                return {
+                    ...field,
+                    id: key,
+                };
+            });
+            model.version = version;
+
+            return model;
+        } catch (error) {
+            throw new Error(`${error.message} with data ${JSON.stringify(settings)}`);
+        }
     }
 
     static _getColumnFromType(type) {

@@ -113,7 +113,11 @@ describe('model', async () => {
                 it('should error when no default connection set', async () => {
                     Connection.setDefaultConnection(null);
                     await assertThrows(async () => {
-                        const model = new Model('table', [], 1);
+                        const model = await Model.create({
+                            table: 'table',
+                            fields: {},
+                            version: 1,
+                        });
                         await model.init();
                     }, "No default connection set");
                 });
@@ -121,7 +125,11 @@ describe('model', async () => {
             
             describe('insert', () => {
                 it('should prevent inserting a non existent field', async () => {
-                    const model = new Model("table", {}, 1);
+                    const model = await Model.create({
+                        table: "table",
+                        fields: {},
+                        version: 1,
+                    });
                     await model.init();
                     await assertThrows(async () => {
                         await model.insert({
@@ -131,12 +139,16 @@ describe('model', async () => {
                 });
 
                 it('should prevent inserting if required field is missing', async () => {
-                    const model = new Model("table", {
-                        foo: {
-                            type: FIELD_TYPE.STRING,
-                            meta: [FIELD_META.REQUIRED],
+                    const model = await Model.create({
+                        table: "table",
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                                meta: [FIELD_META.REQUIRED],
+                            },
                         },
-                    }, 1);
+                        version: 1,
+                    });
                     await model.init();
                     await assertThrows(async () => {
                         await model.insert({});
@@ -144,15 +156,19 @@ describe('model', async () => {
                 });
 
                 it('should insert data as expected', async () => {
-                    const model = new Model("table", {
-                        foo: {
-                            type: FIELD_TYPE.STRING,
-                            meta: [FIELD_META.REQUIRED],
+                    const model = await Model.create({
+                        table: "table", 
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                                meta: [FIELD_META.REQUIRED],
+                            },
+                            bar: {
+                                type: FIELD_TYPE.STRING,
+                            },
                         },
-                        bar: {
-                            type: FIELD_TYPE.STRING,
-                        },
-                    }, 1);
+                        version: 1,
+                    });
                     await model.init();
                     const id = await model.insert({
                         foo: 'bar',
@@ -168,11 +184,15 @@ describe('model', async () => {
                 });
 
                 it('should insert json as expeced', async () => {
-                    const model = new Model("table", {
-                        foo: {
-                            type: FIELD_TYPE.JSON,
+                    const model = await Model.create({
+                        table: "table",
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.JSON,
+                            },
                         },
-                    }, 1);
+                        version: 1,
+                    });
                     await model.init();
                     const id = await model.insert({
                         foo: { foo: 'bar' },
@@ -186,9 +206,9 @@ describe('model', async () => {
                 });
 
                 it('should silently discard any field that is not in the fields data', async () => {
-                    const model = new Model(
-                        'test_1',
-                        {
+                    const model = await Model.create({
+                        table: 'test_1',
+                        fields: {
                             foo: {
                                 type: FIELD_TYPE.INT,
                                 meta: [FIELD_META.REQUIRED],
@@ -197,23 +217,23 @@ describe('model', async () => {
                                 type: FIELD_TYPE.STRING,
                             },
                         },
-                        1,
-                    );
+                        version: 1,
+                    });
                     await model.init();
                     await model.insert({ foo: 1, bar: '1' });
             
                     // second model without bar, should return data without bar
-                    const model2 = new Model(
-                        'test_1',
-                        {
+                    const model2 = await Model.create({
+                        table: 'test_1',
+                        fields: {
                             foo: {
                                 type: FIELD_TYPE.INT,
                                 meta: [FIELD_META.REQUIRED],
                             },
                         },
-                        2,
-                    );
-            
+                        version: 2,
+                    });
+
                     const result = await model2.search({});
             
                     assert.deepStrictEqual(result, [{ id: 1, foo: 1 }]);
@@ -222,15 +242,19 @@ describe('model', async () => {
             
             describe('get', () => {
                 it('should be able to fetch data by id', async () => {
-                    const model = new Model("table", {
-                        foo: {
-                            type: FIELD_TYPE.STRING,
-                            meta: [FIELD_META.REQUIRED],
+                    const model = await Model.create({
+                        table: "table",
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                                meta: [FIELD_META.REQUIRED],
+                            },
+                            bar: {
+                                type: FIELD_TYPE.STRING,
+                            },
                         },
-                        bar: {
-                            type: FIELD_TYPE.STRING,
-                        },
-                    }, 1);
+                        version: 1,
+                    });
                     await model.init();
                     await model.insert({
                         foo: 'bar',
@@ -245,11 +269,15 @@ describe('model', async () => {
                 });
 
                 it('should retrieve json as expected', async () => {
-                    const model = new Model("table", {
-                        foo: {
-                            type: FIELD_TYPE.JSON,
+                    const model = await Model.create({
+                        table: "table",
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.JSON,
+                            },
                         },
-                    }, 1);
+                        version: 1,
+                    });
                     await model.init();
                     const id = await model.insert({
                         foo: { foo: 'bar' },
@@ -262,11 +290,15 @@ describe('model', async () => {
                 });
 
                 it('should handle a string id', async () => {
-                    const model = new Model("table", {
-                        foo: {
-                            type: FIELD_TYPE.JSON,
+                    const model = await Model.create({
+                        table: "table",
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.JSON,
+                            },
                         },
-                    }, 1);
+                        version: 1,
+                    });
                     await model.init();
                     const id = await model.insert({
                         foo: { foo: 'bar' },
@@ -281,15 +313,19 @@ describe('model', async () => {
             
             describe('search', () => {
                 it('should return expected data', async () => {
-                    const model = new Model("table", {
-                        foo: {
-                            type: FIELD_TYPE.STRING,
-                            meta: [FIELD_META.REQUIRED],
+                    const model = await Model.create({
+                        table: "table",
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                                meta: [FIELD_META.REQUIRED],
+                            },
+                            bar: {
+                                type: FIELD_TYPE.STRING,
+                            },
                         },
-                        bar: {
-                            type: FIELD_TYPE.STRING,
-                        },
-                    }, 1);
+                        version: 1,
+                    });
                     await model.init();
                     await model.insert({
                         foo: 'bar',
@@ -310,15 +346,19 @@ describe('model', async () => {
                 });
                 
                 it('should return data with null search', async () => {
-                    const model = new Model("table", {
-                        foo: {
-                            type: FIELD_TYPE.STRING,
-                            meta: [FIELD_META.REQUIRED],
+                    const model = await Model.create({
+                        table: "table",
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                                meta: [FIELD_META.REQUIRED],
+                            },
+                            bar: {
+                                type: FIELD_TYPE.STRING,
+                            },
                         },
-                        bar: {
-                            type: FIELD_TYPE.STRING,
-                        },
-                    }, 1);
+                        version: 1,
+                    });
                     await model.init();
                     await model.insert({
                         foo: 'bar',
@@ -341,14 +381,18 @@ describe('model', async () => {
 
                 it('should return json fields as expected', async () => {
                     it('should retrieve json as expected', async () => {
-                        const model = new Model("table", {
-                            foo: {
-                                type: FIELD_TYPE.JSON,
+                        const model = await Model.create({
+                            table: "table", 
+                            fields: {
+                                foo: {
+                                    type: FIELD_TYPE.JSON,
+                                },
+                                bar: {
+                                    type: FIELD_TYPE.STRING,
+                                },
                             },
-                            bar: {
-                                type: FIELD_TYPE.STRING,
-                            },
-                        }, 1);
+                            version: 1,
+                        });
                         await model.init();
                         await model.insert({
                             foo: { foo: 'bar' },
@@ -377,11 +421,15 @@ describe('model', async () => {
                 });
 
                 it('should limit results as expected', async () => {
-                    const model = new Model("table", {
-                        bar: {
-                            type: FIELD_TYPE.INT,
+                    const model = await Model.create({
+                        table: "table",
+                        fields: {
+                            bar: {
+                                type: FIELD_TYPE.INT,
+                            },
                         },
-                    }, 1);
+                        version: 1,
+                    });
                     await model.init();
                     for (let i=0;i<10;i++) {
                         await model.insert({ bar: i });
@@ -405,11 +453,15 @@ describe('model', async () => {
                 });
 
                 it('should order the results as expected', async () => {
-                    const model = new Model("table", {
-                        bar: {
-                            type: FIELD_TYPE.STRING,
+                    const model = await Model.create({
+                        table: "table", 
+                        fields: {
+                            bar: {
+                                type: FIELD_TYPE.STRING,
+                            },
                         },
-                    }, 1);
+                        version: 1,
+                    });
                     await model.init();
                     await model.insert({ bar: 'arg_a' });
                     await model.insert({ bar: 'arg_b' });
@@ -448,11 +500,15 @@ describe('model', async () => {
                 });
 
                 it('should search for multiple values in a field', async () => {
-                    const model = new Model("table", {
-                        bar: {
-                            type: FIELD_TYPE.STRING,
+                    const model = await Model.create({
+                        table: "table", 
+                        fields: {
+                            bar: {
+                                type: FIELD_TYPE.STRING,
+                            },
                         },
-                    }, 1);
+                        version: 1,
+                    });
                     await model.init();
                     await model.insert({ bar: 'arg_a' });
                     await model.insert({ bar: 'arg_b' });
@@ -475,15 +531,19 @@ describe('model', async () => {
                 let model;
 
                 beforeEach(async () => {
-                    model = new Model("table", {
-                        foo: {
-                            type: FIELD_TYPE.STRING,
-                            meta: [FIELD_META.REQUIRED],
+                    model = await Model.create({
+                        table: "table",
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                                meta: [FIELD_META.REQUIRED],
+                            },
+                            bar: {
+                                type: FIELD_TYPE.JSON,
+                            },
                         },
-                        bar: {
-                            type: FIELD_TYPE.JSON,
-                        },
-                    }, 1);
+                        version: 1,
+                    });
                     await model.init();
                     
                     await model.insert({
@@ -594,15 +654,19 @@ describe('model', async () => {
                 let id2;
 
                 beforeEach(async () => {
-                    model = new Model("table", {
-                        foo: {
-                            type: FIELD_TYPE.STRING,
-                            meta: [FIELD_META.REQUIRED],
+                    model = await Model.create({
+                        table: "table",
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                                meta: [FIELD_META.REQUIRED],
+                            },
+                            bar: {
+                                type: FIELD_TYPE.STRING,
+                            },
                         },
-                        bar: {
-                            type: FIELD_TYPE.STRING,
-                        },
-                    }, 1);
+                        version: 1,
+                    });
                     await model.init();
                     
                     id1 = await model.insert({
@@ -657,26 +721,39 @@ describe('model', async () => {
             });
 
             describe('filterForExport', () => {
-                it('should filter fields as expected', () => {
-                    const model = new Model("table", {
-                        foo: {
-                            meta: [FIELD_META.REQUIRED],
+                it('should filter fields as expected', async () => {
+                    const model = await Model.create({
+                        table: "table",
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                                meta: [FIELD_META.REQUIRED],
+                            },
+                            bar: {
+                                type: FIELD_TYPE.STRING,
+                                meta: [FIELD_META.FILTERED],
+                            },
                         },
-                        bar: {
-                            meta: [FIELD_META.FILTERED],
-                        },
-                    }, 1);
+                        version: 1,
+                    });
                     
                     const result = model.filterForExport({ foo: 'foo', bar: 'bar' });
                     assert.deepStrictEqual(result, { foo: 'foo' }); 
                 });
 
-                it('should not change result if no filtered fields', () => {
-                    const model = new Model("table", {
-                        foo: {
-                            meta: [FIELD_META.REQUIRED],
+                it('should not change result if no filtered fields', async () => {
+                    const model = await Model.create({
+                        table: "table",
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                                meta: [FIELD_META.REQUIRED],
+                            },
+                            bar: {
+                                type: FIELD_TYPE.STRING,
+                            },
                         },
-                        bar: {},
+                        version: 1,
                     });
                     
                     const result = model.filterForExport({ foo: 'foo', bar: 'bar' });
@@ -686,18 +763,22 @@ describe('model', async () => {
 
             describe('version conflict', () => {
                 it('should handle adding new fields', async () => {
-                    const model = new Model("table", {
-                        foo: {
-                            type: FIELD_TYPE.STRING,
-                            meta: [FIELD_META.REQUIRED],
+                    const model = await Model.create({
+                        table: "table",
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                                meta: [FIELD_META.REQUIRED],
+                            },
+                            bar: {
+                                type: FIELD_TYPE.JSON,
+                            },
                         },
-                        bar: {
-                            type: FIELD_TYPE.JSON,
-                        },
-                    }, 1);
-                    const newModel = new Model(
-                        'table',
-                        {
+                        version: 1,
+                    });
+                    const newModel = await Model.create({
+                        table: 'table',
+                        fields: {
                             foo: {
                                 type: FIELD_TYPE.STRING,
                                 meta: [FIELD_META.REQUIRED],
@@ -713,8 +794,8 @@ describe('model', async () => {
                                 type: FIELD_TYPE.STRING,
                             },
                         },
-                        2,
-                    );
+                        version: 2,
+                    });
         
                     await model.init();
                     await newModel.init();
@@ -754,7 +835,11 @@ describe('model', async () => {
 
         describe('cache', () => {
             it('should create expected cache file', async () => {
-                const model = new Model("table", {});
+                const model = await Model.create({
+                    table: "table",
+                    fields: {},
+                    version: 1,
+                });
                 await model.init();
                 assert(fs.existsSync(filePath));
             });
