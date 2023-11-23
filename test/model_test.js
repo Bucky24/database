@@ -525,6 +525,40 @@ describe('model', async () => {
                         },
                     ]);
                 });
+
+                it('should equate false with null or zero', async () => {
+                    const model = await Model.create({
+                        table: "table", 
+                        fields: {
+                            bar: {
+                                type: FIELD_TYPE.BOOLEAN,
+                            },
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                            },
+                        },
+                        version: 1,
+                    });
+                    await model.init();
+                    await model.insert({ foo: 'foo' });
+                    await model.insert({ bar: true });
+                    await model.insert({ bar: false });
+
+                    let data = await model.search({ bar: false });
+                    console.log(data);
+                    assert.deepStrictEqual(data, [
+                        {
+                            id: 1,
+                            bar: false,
+                            foo: 'foo',
+                        },
+                        {
+                            id: 3,
+                            bar: false,
+                            foo: null,
+                        },
+                    ]);
+                });
             });
             
             describe('update', () => {

@@ -244,6 +244,8 @@ class MysqlConnection extends Connection {
                 fieldList.push(`${key} in (${questionList.join(', ')})`);
             } else if (value === null) {
                 fieldList.push(`${key} is null`);
+            } else if (value === false) {
+                fieldList.push(`(${key} = 0 || ${key} is null)`)
             } else {
                 fieldList.push(`${key} = ?`);
                 values.push(whereClause[key]);

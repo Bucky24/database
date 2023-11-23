@@ -238,6 +238,8 @@ class PostgresConnection extends Connection {
                 fieldList.push(`${key} in (${questionList.join(', ')})`);
             } else if (value === null) {
                 fieldList.push(`${key} is null`);
+            } else if (value === false) {
+                fieldList.push(`(${key} = false or ${key} is null)`);
             } else {
                 fieldList.push(`${key} = $${questionCount + 1}`);
                 questionCount ++;

@@ -73,6 +73,11 @@ class FileConnection extends Connection {
                         matches = false;
                         break;
                     }
+                } else if (value === false) {
+                    if (obj[key]) {
+                        matches = false;
+                        break;
+                    }
                 } else {
                     if (obj[key] != value) {
                         matches = false;
