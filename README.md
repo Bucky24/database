@@ -130,7 +130,7 @@ A Field is an object with the following parameters:
 Example:
 
 ```
-const tableModel = await Model.create({
+const tableModel = Model.create({
     table: "sample_table",
     fields: {
         field1: {
@@ -263,7 +263,7 @@ This method takes in a data object and returns a new object with all appropriate
 Example:
 
 ```
-const userModel = await Model.create({
+const userModel = Model.create({
     table: "user",
     fields: {
         password: {
