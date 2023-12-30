@@ -187,6 +187,27 @@ class Model {
             return this.processResult(item);
         });
     }
+
+    async count(queryData = {}) {
+        const connection = getDefaultConnection();
+        
+        if (connection === null) {
+            throw new Error('No default connection set');
+        }
+        
+        const keys = Object.keys(queryData);
+        for (let i=0;i<keys.length;i++) {
+            const key = keys[0];
+            const data = this.getFieldData(key);
+            if (data === null) {
+                throw new Error(`No such field '${key}'`);
+            }
+        }
+
+        const result = await connection.count(this.table, queryData);
+
+        return result;
+    }
     
     async update(id, fields) {
         const connection = getDefaultConnection();

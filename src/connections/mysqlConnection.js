@@ -128,6 +128,34 @@ class MysqlConnection extends Connection {
         return fieldRow;
     }
 
+    static _generateWhere(whereClause) {
+        const fieldList = [];
+        const values = [];
+        Object.keys(whereClause).forEach((key) => {
+            const value = whereClause[key];
+            if (Array.isArray(value)) {
+                const questionList = [];
+                for (const item of value) {
+                    questionList.push('?');
+                    values.push(item);
+                }
+                fieldList.push(`${key} in (${questionList.join(', ')})`);
+            } else if (value === null) {
+                fieldList.push(`${key} is null`);
+            } else if (value === false) {
+                fieldList.push(`(${key} = 0 || ${key} is null)`)
+            } else {
+                fieldList.push(`${key} = ?`);
+                values.push(whereClause[key]);
+            }
+        });
+
+        return {
+            fieldList,
+            values,
+        };
+    }
+
     async initializeTable(tableName, fields, version) {
         const getVersionsQuery = "SELECT * FROM information_schema.tables WHERE table_schema = '" + this.connectionData.database + "' AND table_name = '" + this.getTable('table_versions') + "' LIMIT 1;"
 
@@ -231,26 +259,7 @@ class MysqlConnection extends Connection {
     async search(tableName, whereClause, order, limit) {
         let query = "SELECT * FROM `" + tableName + "`";
 
-        const fieldList = [];
-        const values = [];
-        Object.keys(whereClause).forEach((key) => {
-            const value = whereClause[key];
-            if (Array.isArray(value)) {
-                const questionList = [];
-                for (const item of value) {
-                    questionList.push('?');
-                    values.push(item);
-                }
-                fieldList.push(`${key} in (${questionList.join(', ')})`);
-            } else if (value === null) {
-                fieldList.push(`${key} is null`);
-            } else if (value === false) {
-                fieldList.push(`(${key} = 0 || ${key} is null)`)
-            } else {
-                fieldList.push(`${key} = ?`);
-                values.push(whereClause[key]);
-            }
-        });
+        const { fieldList, values } = MysqlConnection._generateWhere(whereClause);
 
         if (fieldList.length > 0) {
             query += " WHERE " + fieldList.join(" AND ");
@@ -283,6 +292,20 @@ class MysqlConnection extends Connection {
         const results = await this._query(query, values);
 
         return results;
+    }
+
+    async count(tableName, whereClause) {
+        let query = "SELECT COUNT(*) as `count` FROM `" + tableName + "`";
+
+        const { fieldList, values } = MysqlConnection._generateWhere(whereClause);
+
+        if (fieldList.length > 0) {
+            query += " WHERE " + fieldList.join(" AND ");
+        }
+
+        const results = await this._query(query, values);
+
+        return results[0].count;
     }
 
     async update(tableName, id, update) {

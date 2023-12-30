@@ -851,6 +851,37 @@ describe('model', async () => {
                     ]);
                 });
             });
+
+            describe('count', async () => {
+                it('should return count of items matching', async () => {
+                    const model = Model.create({
+                        table: "table",
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                                meta: [FIELD_META.REQUIRED],
+                            },
+                        },
+                        version: 1,
+                    });
+                    await model.init();
+                    await model.insert({
+                        foo: 'bar',
+                    });
+                    await model.insert({
+                        foo: 'bar',
+                    });
+                    await model.insert({
+                        foo: 'baz',
+                    });
+
+                    const count = await model.count({
+                        foo: 'bar',
+                    });
+
+                    assert.equal(count, 2);
+                });
+            });
         });
     }
 

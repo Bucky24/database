@@ -209,6 +209,22 @@ const objects = await tableModel.get({
 });
 ```
 
+### count
+
+The count method takes in a query to search for and returns the total number of rows that matched.
+
+| Param | Type | Description |
+|---|---|---|
+| query | Object | An object with keys being the fields to look for and values being the expected value. Required |
+
+Example:
+
+```
+const numberOfRows = await tableModel.count({
+    field1: 5,
+});
+```
+
 ### insert
 
 The insert method inserts a new object into the data store, returning the newly generated auto-incremented id. At this time it does not return other auto-incremented values.

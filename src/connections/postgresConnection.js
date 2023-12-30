@@ -100,6 +100,38 @@ class PostgresConnection extends Connection {
         return fieldRow;
     }
 
+    static _getWhere(whereClause) {
+        const fieldList = [];
+        const values = [];
+        let questionCount = 0;
+        Object.keys(whereClause).forEach((key) => {
+            const value = whereClause[key];
+            if (Array.isArray(value)) {
+                const questionList = [];
+                for (const item of value) {
+                    questionList.push("$" + (questionCount + 1));
+                    questionCount ++;
+                    values.push(item);
+                }
+                fieldList.push(`${key} in (${questionList.join(', ')})`);
+            } else if (value === null) {
+                fieldList.push(`${key} is null`);
+            } else if (value === false) {
+                fieldList.push(`(${key} = false or ${key} is null)`);
+            } else {
+                fieldList.push(`${key} = $${questionCount + 1}`);
+                questionCount ++;
+                values.push(whereClause[key]);
+            }
+        });
+
+        return {
+            fieldList,
+            values,
+            questionCount,
+        };
+    }
+
     async initializeTable(tableName, fields, version) {
         // first see if our versions table exists
         const getVersionsQuery = "SELECT * FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename = '" + this.getTable('table_versions') + "' LIMIT 1;"
@@ -223,29 +255,7 @@ class PostgresConnection extends Connection {
     async search(tableName, whereClause, order, limit) {
         let query = "SELECT * FROM \"" + tableName + "\"";
 
-        const fieldList = [];
-        const values = [];
-        let questionCount = 0;
-        Object.keys(whereClause).forEach((key) => {
-            const value = whereClause[key];
-            if (Array.isArray(value)) {
-                const questionList = [];
-                for (const item of value) {
-                    questionList.push("$" + (questionCount + 1));
-                    questionCount ++;
-                    values.push(item);
-                }
-                fieldList.push(`${key} in (${questionList.join(', ')})`);
-            } else if (value === null) {
-                fieldList.push(`${key} is null`);
-            } else if (value === false) {
-                fieldList.push(`(${key} = false or ${key} is null)`);
-            } else {
-                fieldList.push(`${key} = $${questionCount + 1}`);
-                questionCount ++;
-                values.push(whereClause[key]);
-            }
-        });
+        let { fieldList, values, questionCount } = PostgresConnection._getWhere(whereClause);
 
         if (fieldList.length > 0) {
             query += " WHERE " + fieldList.join(" AND ");
@@ -279,6 +289,20 @@ class PostgresConnection extends Connection {
         const results = await this._query(query, values);
 
         return results.rows;
+    }
+
+    async count(tableName, whereClause) {
+        let query = "SELECT COUNT(*) as \"count\" FROM \"" + tableName + "\"";
+
+        let { fieldList, values, questionCount } = PostgresConnection._getWhere(whereClause);
+
+        if (fieldList.length > 0) {
+            query += " WHERE " + fieldList.join(" AND ");
+        }
+
+        const results = await this._query(query, values);
+
+        return results.rows[0].count;
     }
 
     async update(tableName, id, update) {

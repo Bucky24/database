@@ -182,6 +182,11 @@ class FileConnection extends Connection {
         
         this._writeCacheFile(tableName, data);
     }
+
+    async count(tableName, whereClause) {
+        const rows = await this.search(tableName, whereClause);
+        return rows.length;
+    }
 }
 
 module.exports = FileConnection;
