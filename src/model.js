@@ -21,10 +21,10 @@ const modelSchema = object({
 });
 
 class Model {
-    static async create(settings) {
+    static create(settings) {
         try {
-            const { table, fields, version } = await modelSchema.validate(settings);
-            const model = new Model();
+            const { table, fields, version } = modelSchema.validateSync(settings);
+            const model = new Model(settings);
             model.table = table;
             model.fields = {
                 id: {

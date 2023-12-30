@@ -113,7 +113,7 @@ describe('model', async () => {
                 it('should error when no default connection set', async () => {
                     Connection.setDefaultConnection(null);
                     await assertThrows(async () => {
-                        const model = await Model.create({
+                        const model = Model.create({
                             table: 'table',
                             fields: {},
                             version: 1,
@@ -125,7 +125,7 @@ describe('model', async () => {
             
             describe('insert', () => {
                 it('should prevent inserting a non existent field', async () => {
-                    const model = await Model.create({
+                    const model = Model.create({
                         table: "table",
                         fields: {},
                         version: 1,
@@ -139,7 +139,7 @@ describe('model', async () => {
                 });
 
                 it('should prevent inserting if required field is missing', async () => {
-                    const model = await Model.create({
+                    const model = Model.create({
                         table: "table",
                         fields: {
                             foo: {
@@ -156,7 +156,7 @@ describe('model', async () => {
                 });
 
                 it('should insert data as expected', async () => {
-                    const model = await Model.create({
+                    const model = Model.create({
                         table: "table", 
                         fields: {
                             foo: {
@@ -184,7 +184,7 @@ describe('model', async () => {
                 });
 
                 it('should insert json as expeced', async () => {
-                    const model = await Model.create({
+                    const model = Model.create({
                         table: "table",
                         fields: {
                             foo: {
@@ -206,7 +206,7 @@ describe('model', async () => {
                 });
 
                 it('should silently discard any field that is not in the fields data', async () => {
-                    const model = await Model.create({
+                    const model = Model.create({
                         table: 'test_1',
                         fields: {
                             foo: {
@@ -223,7 +223,7 @@ describe('model', async () => {
                     await model.insert({ foo: 1, bar: '1' });
             
                     // second model without bar, should return data without bar
-                    const model2 = await Model.create({
+                    const model2 = Model.create({
                         table: 'test_1',
                         fields: {
                             foo: {
@@ -242,7 +242,7 @@ describe('model', async () => {
             
             describe('get', () => {
                 it('should be able to fetch data by id', async () => {
-                    const model = await Model.create({
+                    const model = Model.create({
                         table: "table",
                         fields: {
                             foo: {
@@ -269,7 +269,7 @@ describe('model', async () => {
                 });
 
                 it('should retrieve json as expected', async () => {
-                    const model = await Model.create({
+                    const model = Model.create({
                         table: "table",
                         fields: {
                             foo: {
@@ -290,7 +290,7 @@ describe('model', async () => {
                 });
 
                 it('should handle a string id', async () => {
-                    const model = await Model.create({
+                    const model = Model.create({
                         table: "table",
                         fields: {
                             foo: {
@@ -313,7 +313,7 @@ describe('model', async () => {
             
             describe('search', () => {
                 it('should return expected data', async () => {
-                    const model = await Model.create({
+                    const model = Model.create({
                         table: "table",
                         fields: {
                             foo: {
@@ -346,7 +346,7 @@ describe('model', async () => {
                 });
                 
                 it('should return data with null search', async () => {
-                    const model = await Model.create({
+                    const model = Model.create({
                         table: "table",
                         fields: {
                             foo: {
@@ -381,7 +381,7 @@ describe('model', async () => {
 
                 it('should return json fields as expected', async () => {
                     it('should retrieve json as expected', async () => {
-                        const model = await Model.create({
+                        const model = Model.create({
                             table: "table", 
                             fields: {
                                 foo: {
@@ -421,7 +421,7 @@ describe('model', async () => {
                 });
 
                 it('should limit results as expected', async () => {
-                    const model = await Model.create({
+                    const model = Model.create({
                         table: "table",
                         fields: {
                             bar: {
@@ -453,7 +453,7 @@ describe('model', async () => {
                 });
 
                 it('should order the results as expected', async () => {
-                    const model = await Model.create({
+                    const model = Model.create({
                         table: "table", 
                         fields: {
                             bar: {
@@ -500,7 +500,7 @@ describe('model', async () => {
                 });
 
                 it('should search for multiple values in a field', async () => {
-                    const model = await Model.create({
+                    const model = Model.create({
                         table: "table", 
                         fields: {
                             bar: {
@@ -527,7 +527,7 @@ describe('model', async () => {
                 });
 
                 it('should equate false with null or zero', async () => {
-                    const model = await Model.create({
+                    const model = Model.create({
                         table: "table", 
                         fields: {
                             bar: {
@@ -565,7 +565,7 @@ describe('model', async () => {
                 let model;
 
                 beforeEach(async () => {
-                    model = await Model.create({
+                    model = Model.create({
                         table: "table",
                         fields: {
                             foo: {
@@ -688,7 +688,7 @@ describe('model', async () => {
                 let id2;
 
                 beforeEach(async () => {
-                    model = await Model.create({
+                    model = Model.create({
                         table: "table",
                         fields: {
                             foo: {
@@ -756,7 +756,7 @@ describe('model', async () => {
 
             describe('filterForExport', () => {
                 it('should filter fields as expected', async () => {
-                    const model = await Model.create({
+                    const model = Model.create({
                         table: "table",
                         fields: {
                             foo: {
@@ -776,7 +776,7 @@ describe('model', async () => {
                 });
 
                 it('should not change result if no filtered fields', async () => {
-                    const model = await Model.create({
+                    const model = Model.create({
                         table: "table",
                         fields: {
                             foo: {
@@ -797,7 +797,7 @@ describe('model', async () => {
 
             describe('version conflict', () => {
                 it('should handle adding new fields', async () => {
-                    const model = await Model.create({
+                    const model = Model.create({
                         table: "table",
                         fields: {
                             foo: {
@@ -810,7 +810,7 @@ describe('model', async () => {
                         },
                         version: 1,
                     });
-                    const newModel = await Model.create({
+                    const newModel = Model.create({
                         table: 'table',
                         fields: {
                             foo: {
@@ -869,7 +869,7 @@ describe('model', async () => {
 
         describe('cache', () => {
             it('should create expected cache file', async () => {
-                const model = await Model.create({
+                const model = Model.create({
                     table: "table",
                     fields: {},
                     version: 1,
