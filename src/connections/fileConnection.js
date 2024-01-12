@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require("path");
 
-const { Connection, FIELD_META, ORDER } = require('./connection');
+const { Connection, FIELD_META, ORDER, FIELD_TYPE } = require('./connection');
 
 class FileConnection extends Connection {
     constructor(cacheDir, prefix = null) {
@@ -122,7 +122,18 @@ class FileConnection extends Connection {
         return matching;
     }
 
-    async update(tableName, id, update) {
+    async update(tableName, id, update, tableFields) {
+        for (const field in update) {
+            const fieldData = tableFields[field];
+            if (
+                fieldData.type === FIELD_TYPE.STRING &&
+                fieldData.size &&
+                update[field].length > fieldData.size
+            ) {
+                throw new Error(`Field "${field} received data of size ${insertData[field].length}, but expected data of at most length ${fieldData.size}`);
+            }
+        }
+
         const data = this._readCacheFile(tableName);
         for (let i=0;i<data.data.length;i++) {
             const obj = data.data[i];
@@ -154,6 +165,17 @@ class FileConnection extends Connection {
                 newObj[tableField] = data.auto[tableField];
                 newId = data.auto[tableField];
                 data.auto[tableField] += 1;
+            }
+        }
+
+        for (const field in insertData) {
+            const fieldData = tableFields[field];
+            if (
+                fieldData.type === FIELD_TYPE.STRING &&
+                fieldData.size &&
+                insertData[field].length > fieldData.size
+            ) {
+                throw new Error(`Field "${field} received data of size ${insertData[field].length}, but expected data of at most length ${fieldData.size}`);
             }
         }
         

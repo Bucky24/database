@@ -3,12 +3,6 @@ const MysqlConnection = require("./mysqlConnection");
 const PostgresConnection = require("./postgresConnection");
 const Connection = require('./connection');
 
-const CONNECTION_TYPE = {
-    MYSQL: 'connection/mysql',
-    FILE: 'connection/file',
-    POSTGRES: 'connection/postgres',
-};
-
 let defaultConnection = null;
 
 function setDefaultConnection(connection) {

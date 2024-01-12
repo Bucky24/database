@@ -18,7 +18,9 @@ const assertThrows = async (fn, message) => {
     }
     
     assert(error !== null);
-    assert.strictEqual(error.message, message);
+    if (message) {
+        assert.strictEqual(error.message, message);
+    }
 }
 
 describe('model', async () => {  
@@ -120,6 +122,52 @@ describe('model', async () => {
                         });
                         await model.init();
                     }, "No default connection set");
+                });
+
+                it('should create a text field when no string size given', async () => {
+                    const model = Model.create({
+                        table: "table",
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                            },
+                        },
+                        version: 1,
+                    });
+                    await model.init();
+                    await model.insert({
+                        foo: 'sdfklsdjfdlskfjdflkfjsdlfksjfkdasl',
+                    });
+                });
+
+                it('should create a varchar of a certain size when string size given', async () => {
+                    const model = Model.create({
+                        table: "table",
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                                size: 10,
+                            },
+                        },
+                        version: 1,
+                    });
+                    await model.init();
+
+                    await assertThrows(async () => {
+                        await model.insert({
+                            foo: 'sdfklsdjfdlskfjdflkfjsdlfksjfkdasl',
+                        });
+                    });
+
+                    const id = await model.insert({
+                        foo: 'foo',
+                    });
+
+                    await assertThrows(async () => {
+                        await model.update(id, {
+                            foo: 'sdfklsdjfdlskfjdflkfjsdlfksjfkdasl',
+                        });
+                    });
                 });
             });
             

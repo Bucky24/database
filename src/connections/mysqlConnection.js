@@ -41,10 +41,13 @@ class MysqlConnection extends Connection {
         });
     }
 
-    static _getColumnFromType(type) {
+    static _getColumnFromType(type, fieldData) {
         if (type === FIELD_TYPE.INT) {
             return 'INT';
         } else if (type === FIELD_TYPE.STRING) {
+            if (fieldData.size) {
+                return `VARCHAR(${fieldData.size})`;
+            }
             return 'TEXT';
         } else if (type === FIELD_TYPE.JSON) {
             return 'TEXT';
@@ -114,7 +117,7 @@ class MysqlConnection extends Connection {
     }
 
     static _getFieldCreationString(fieldName, data, ticks) {
-        let fieldRow = ticks + fieldName + ticks + " " + this._getColumnFromType(data.type);
+        let fieldRow = ticks + fieldName + ticks + " " + this._getColumnFromType(data.type, data);
 
         if (data.meta) {
             if (data.meta.includes(FIELD_META.REQUIRED)) {

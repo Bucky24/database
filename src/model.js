@@ -12,6 +12,7 @@ const modelSchema = object({
                     [key]: object({
                         type: mixed().oneOf(Object.values(FIELD_TYPE)).required(),
                         meta: array().of(mixed().oneOf(Object.values(FIELD_META)).required()),
+                        size: number().positive().optional(),
                     }),
                 };
             }, {}),
@@ -231,7 +232,13 @@ class Model {
             fields[key] = this.processForSave(value, key);
         }
 
-        return await connection.update(this.table, id, fields);
+        const tableFields = Object.keys(this.fields);
+        return await connection.update(this.table, id, fields, tableFields.reduce((obj, field) => {
+            return {
+                ...obj,
+                [field]: this.getFieldData(field),
+            };
+        }));
     }
     
     async insert(insertData) {

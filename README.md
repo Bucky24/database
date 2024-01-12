@@ -136,6 +136,7 @@ const tableModel = Model.create({
         field1: {
             type: FIELD_TYPE.STRING,
             meta: [FIELD_META.REQUIRED, FIELD_META.AUTO],
+            size: <optional number, only used for the STRING type>
         },
     },
     version: 1,
