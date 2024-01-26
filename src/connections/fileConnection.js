@@ -18,7 +18,7 @@ class FileConnection extends Connection {
         return true;
     }
 
-    close() {
+    async close() {
         // no action
         this.connection = null;
     }

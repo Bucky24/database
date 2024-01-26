@@ -100,6 +100,15 @@ Example:
 const connection = Connection.getDefaultConnection();
 ```
 
+### close
+
+This method closes a current connection
+
+```
+const connection = Connection.getDefaultConnection();
+await connection.close();
+```
+
 ## Model
 
 Models contain the code to actually setup and manipulate data.

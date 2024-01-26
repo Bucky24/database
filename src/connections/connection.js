@@ -1,5 +1,3 @@
-const fs = require('fs');
-
 const CONNECTION_TYPE = {
     MYSQL: 'connection/mysql',
     FILE: 'connection/file',
