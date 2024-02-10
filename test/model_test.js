@@ -607,6 +607,29 @@ describe('model', async () => {
                         },
                     ]);
                 });
+
+                it('should respect the offset in results', async () => {
+                    const model = Model.create({
+                        table: "table", 
+                        fields: {
+                            bar: {
+                                type: FIELD_TYPE.BOOLEAN,
+                            },
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                            },
+                        },
+                        version: 1,
+                    });
+                    await model.init();
+                    await model.insert({ foo: 'foo1' });
+                    await model.insert({ foo: 'foo2' });
+                    await model.insert({ foo: 'foo3' });
+
+                    const rows = await model.search({}, null, 50, 2);
+                    assert.equal(rows.length, 1);
+                    assert.equal(rows[0]['foo'], 'foo3');
+                });
             });
             
             describe('update', () => {

@@ -259,7 +259,7 @@ class MysqlConnection extends Connection {
         return result.insertId;
     }
 
-    async search(tableName, whereClause, order, limit) {
+    async search(tableName, whereClause, order, limit, offset) {
         let query = "SELECT * FROM `" + tableName + "`";
 
         const { fieldList, values } = MysqlConnection._generateWhere(whereClause);
@@ -288,8 +288,16 @@ class MysqlConnection extends Connection {
         }
 
         if (limit) {
+
             query += " LIMIT ?";
             values.push(limit.toString());
+    
+            if (offset) {
+                query += " OFFSET ?";
+                values.push(offset.toString());
+            }
+        } else if (offset) {
+            throw new Error("Mysql does not support offset without limit");
         }
 
         const results = await this._query(query, values);

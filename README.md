@@ -210,6 +210,7 @@ The search method takes in a query to search for and returns all objects that ma
 | query | Object | An object with keys being the fields to look for and values being the expected value. Required |
 | order | Object | An object with keys being the fields to order by and values being one of ORDER. Note these fields are not escaped due to a limitation in `node-mysql`. Optional |
 | limit | Integer | Indicates how many results to return. Optional |
+| offset | Integer | Indicates how many results should be skipped. Optional. Note MySQL does not allow an offset without a limit. |
 
 Example:
 

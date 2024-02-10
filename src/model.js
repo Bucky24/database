@@ -166,7 +166,7 @@ class Model {
         return result[0];
     }
     
-    async search(queryData = {}, order = null, limit = null) {
+    async search(queryData = {}, order = null, limit = null, offset = null) {
         const connection = getDefaultConnection();
         
         if (connection === null) {
@@ -182,7 +182,7 @@ class Model {
             }
         }
 
-        const result = await connection.search(this.table, queryData, order, limit);
+        const result = await connection.search(this.table, queryData, order, limit, offset);
 
         return result.map((item) => {
             return this.processResult(item);

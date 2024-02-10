@@ -255,7 +255,7 @@ class PostgresConnection extends Connection {
         return result.rows[0].id;
     }
 
-    async search(tableName, whereClause, order, limit) {
+    async search(tableName, whereClause, order, limit, offset) {
         let query = "SELECT * FROM \"" + tableName + "\"";
 
         let { fieldList, values, questionCount } = PostgresConnection._getWhere(whereClause);
@@ -287,6 +287,12 @@ class PostgresConnection extends Connection {
             query += " LIMIT $" + (questionCount + 1);
             questionCount ++;
             values.push(limit.toString());
+        }
+
+        if (offset) {
+            query += " OFFSET $" + (questionCount + 1);
+            questionCount ++;
+            values.push(offset.toString());
         }
 
         const results = await this._query(query, values);

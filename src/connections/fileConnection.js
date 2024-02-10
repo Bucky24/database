@@ -54,11 +54,13 @@ class FileConnection extends Connection {
         fs.writeFileSync(cacheFilePath, JSON.stringify(data, null, 4));
     }
 
-    async search(tableName, whereClause, order, limit) {
+    async search(tableName, whereClause, order, limit, offset) {
         let matching = [];
 
+        const startRow = offset || 0;
+
         const data = this._readCacheFile(tableName);
-        for (let i=0;i<data.data.length;i++) {
+        for (let i=startRow;i<data.data.length;i++) {
             const obj = data.data[i];
             let matches = true;
             for (const key in whereClause) {
