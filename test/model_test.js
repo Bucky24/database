@@ -747,6 +747,7 @@ describe('model', async () => {
                 beforeEach(async () => {
                     server = express();
                     server.use(express.json());
+                    middlewareCalled = false;
 
                     model = new Model("table", {
                         foo: {
@@ -805,13 +806,13 @@ describe('model', async () => {
                             foo: 'baz',
                             bar: 10,
                         });
+                    assert.equal(middlewareCalled, true);
 
                     assert.deepEqual(response.body, { id: 1, foo: 'baz', bar: 10 });
 
                     response = await request(server).get('/table/1');
 
                     assert.deepEqual(response.body, { id: 1, foo: 'baz', bar: 10 });
-                    assert.equal(middlewareCalled, true);
                 });
 
                 it('should create an object when using the POST api', async () => {
@@ -820,6 +821,7 @@ describe('model', async () => {
                             foo: 'mytest',
                             bar: 1000,
                         });
+                    assert.equal(middlewareCalled, true);
 
                     const id = response.body.id;
 
@@ -828,7 +830,18 @@ describe('model', async () => {
                     response = await request(server).get('/table/' + id);
 
                     assert.deepEqual(response.body, { id, foo: 'mytest', bar: 1000 });
+                });
+
+                it('should delete an object when using the DELETE /:id api', async () => {
+                    let response = await request(server).delete('/table/1');
                     assert.equal(middlewareCalled, true);
+
+                    assert.deepEqual(response.body, { id: 1 });
+
+                    response = await request(server).get('/table/1');
+
+                    assert.equal(response.status, 404);
+                    assert.deepEqual(response.body, {});
                 });
             });
         });

@@ -74,7 +74,7 @@ class Model {
             }
         });
 
-        app.get('/' + this.table + "/:id", async (req, res) => {
+        app.get('/' + this.table + "/:id", ...middleware, async (req, res) => {
             try {
                 const object = await this.get(req.params.id);
                 if (!object) {
@@ -84,6 +84,24 @@ class Model {
                 const filteredObject = this.filterForExport(object);
 
                 res.status(200).json(filteredObject);
+            } catch (e) {
+                console.error(e);
+                res.status(500).end();
+            }
+        });
+
+        app.delete('/' + this.table + "/:id", ...middleware, async (req, res) => {
+            try {
+                const object = await this.get(req.params.id);
+                if (!object) {
+                    res.status(404).end();
+                    return;
+                }
+
+                await this.delete(req.params.id);
+                res.status(200).json({
+                    id: req.params.id,
+                });
             } catch (e) {
                 console.error(e);
                 res.status(500).end();
