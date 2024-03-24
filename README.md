@@ -315,3 +315,29 @@ console.log(filteredUserObject);
 ### Table Changes
 
 If you need to add new fields to a Model, add them to the list then bump the version number. The system will automatically add the new columns the next time `init` is called.
+
+### CRUD Methods
+
+Each table has the capability to generate CRUD methods via Express. The following routes are created:
+
+```
+POST /table
+PUT /table
+GET /table
+GET /table/:id
+```
+
+Where `table` is the name of the database table for the model.
+
+To create these methods, the `createCrudApis` method can be called, with the following parameters:
+
+| Param | Type | Description |
+|---|---|---|
+| app | Express App | The Express App or Router to add the new apis to |
+| options | CrudOptions | An options array. Optional |
+
+#### CrudOptions
+
+| Key | Type | Description |
+|---|---|---|
+| middleware | Function | Function[] | A singular or array of functions confirming to Express Middleware |

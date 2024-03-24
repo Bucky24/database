@@ -51,6 +51,123 @@ class Model {
         }
     }
 
+    createCrudApis(app, options = {}) {
+        let middleware = options.middleware || [];
+        if (!Array.isArray(middleware)) {
+            middleware = [middleware];
+        }
+        const processBody = (req, res) => {
+            if (!req.body) {
+                res.status(400).json({
+                    error: 'No json body detected',
+                });
+                return false;
+            }
+            const missingFields = [];
+            for (const field of this.fieldList) {
+                const fieldData = this.getFieldData(field.id);
+                if (req.body[field.id] === undefined && fieldData?.meta.includes(FIELD_META.REQUIRED)) {
+                    missingFields.push(field);
+                }
+            }
+
+            const extraFields = [];
+            for (const field in req.body) {
+                if (!this.getFieldData(field)) {
+                    extraFields.push(field);
+                }
+            }
+
+            if (missingFields.length > 0 || extraFields.length > 0) {
+                res.status(400).json({
+                    missingFields,
+                    extraFields,
+                });
+                return false;
+            }
+
+            return true;
+        }
+        app.get('/' + this.table, ...middleware, async (req, res) => {
+            try {
+                const objects = await this.search({});
+                const filteredObjects = this.filterForExport(objects);
+
+                res.status(200).json(filteredObjects);
+            } catch (e) {
+                console.error(e);
+                res.status(500).end();
+            }
+        });
+
+        app.get('/' + this.table + "/:id", ...middleware, async (req, res) => {
+            try {
+                const object = await this.get(req.params.id);
+                if (!object) {
+                    res.status(404).end();
+                    return;
+                }
+                const filteredObject = this.filterForExport(object);
+
+                res.status(200).json(filteredObject);
+            } catch (e) {
+                console.error(e);
+                res.status(500).end();
+            }
+        });
+
+        app.delete('/' + this.table + "/:id", ...middleware, async (req, res) => {
+            try {
+                const object = await this.get(req.params.id);
+                if (!object) {
+                    res.status(404).end();
+                    return;
+                }
+
+                await this.delete(req.params.id);
+                res.status(200).json({
+                    id: req.params.id,
+                });
+            } catch (e) {
+                console.error(e);
+                res.status(500).end();
+            }
+        });
+
+        app.post('/' + this.table, ...middleware, async (req, res) => {
+            if (!processBody(req, res)) {
+                return;
+            }
+
+            try {
+                const id = await this.insert(req.body);
+                const newData = await this.get(id);
+
+                res.status(200).json(newData);
+            } catch (e) {
+                console.error(e);
+                res.status(500).end();
+            }
+        });
+
+        app.put('/' + this.table + '/:id', ...middleware, async (req, res) => {
+            const { id } = req.params;
+            if (!processBody(req, res)) {
+                return;
+            }
+
+            try {
+                await this.update(id, req.body);
+                const newData = await this.get(id);
+
+                res.status(200).json(newData);
+            } catch (e) {
+                console.error(e);
+                res.status(500).end();
+            }
+        });
+    }
+
     static _getColumnFromType(type) {
         if (type === FIELD_TYPE.INT) {
             return 'INT';
