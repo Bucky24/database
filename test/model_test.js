@@ -742,9 +742,11 @@ describe('model', async () => {
             describe('createCrudApis', async () => {
                 let server = null;
                 let model;
+                let middlewareCalled = false;
 
                 beforeEach(async () => {
                     server = express();
+                    server.use(express.json());
 
                     model = new Model("table", {
                         foo: {
@@ -764,7 +766,12 @@ describe('model', async () => {
                         bar: 10,
                     });
 
-                    model.createCrudApis(server);
+                    model.createCrudApis(server, {
+                        middleware: (req, res, next) => {
+                            middlewareCalled = true;
+                            next();
+                        }
+                    });
                 });
 
                 it('should return all objects when using the GET / api', async () => {
@@ -774,12 +781,14 @@ describe('model', async () => {
                         { id: 1, foo: 'bar', bar: 5 },
                         { id: 2, foo: 'baz', bar: 10 },
                     ]);
+                    assert.equal(middlewareCalled, true);
                 });
 
                 it('should return a specific object when using the GET /:id api', async () => {
                     const response = await request(server).get('/table/1');
 
                     assert.deepEqual(response.body, { id: 1, foo: 'bar', bar: 5 });
+                    assert.equal(middlewareCalled, true);
                 });
 
                 it('should return a 404 when using the GET /:id api on a non existing id', async () => {
@@ -787,6 +796,39 @@ describe('model', async () => {
 
                     assert.equal(response.status, 404);
                     assert.deepEqual(response.body, {});
+                    assert.equal(middlewareCalled, true);
+                });
+
+                it('should update an object when using the PUT /:id api', async () => {
+                    let response = await request(server).put('/table/1')
+                        .send({
+                            foo: 'baz',
+                            bar: 10,
+                        });
+
+                    assert.deepEqual(response.body, { id: 1, foo: 'baz', bar: 10 });
+
+                    response = await request(server).get('/table/1');
+
+                    assert.deepEqual(response.body, { id: 1, foo: 'baz', bar: 10 });
+                    assert.equal(middlewareCalled, true);
+                });
+
+                it('should create an object when using the POST api', async () => {
+                    let response = await request(server).post('/table')
+                        .send({
+                            foo: 'mytest',
+                            bar: 1000,
+                        });
+
+                    const id = response.body.id;
+
+                    assert.deepEqual(response.body, { id, foo: 'mytest', bar: 1000 });
+
+                    response = await request(server).get('/table/' + id);
+
+                    assert.deepEqual(response.body, { id, foo: 'mytest', bar: 1000 });
+                    assert.equal(middlewareCalled, true);
                 });
             });
         });
