@@ -40,7 +40,7 @@ describe('model', async () => {
                 }
             },
         },
-        /*'mysql': {
+        'mysql': {
             setup: () => {
                 return Connection.mysqlConnection({
                     host: mysqlAuth.host,
@@ -96,7 +96,7 @@ describe('model', async () => {
                     await connection.close();
                 }
             }
-        },*/
+        },
     };
 
     for (const connectionType in connections) {
