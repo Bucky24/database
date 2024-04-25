@@ -178,6 +178,11 @@ class PostgresConnection extends Connection {
                     }
                 }
 
+                if (data.foreign) {
+                    const foreignTable = this.getTable(data.foreign.table.getTable());
+                    fieldRow += ` REFERENCES "${foreignTable}" ("${data.foreign.field}")`;
+                }
+
                 return fieldRow;
             });
 
@@ -207,16 +212,30 @@ class PostgresConnection extends Connection {
                     }
                 }
 
-
                 if (missingInDb.length > 0) {
                     const fieldStrings = [];
+                    const rowsWithForeign = [];
                     for (const missing of missingInDb) {
                         const data = fields[missing];
                         fieldStrings.push("ADD COLUMN " + PostgresConnection._getFieldCreationString(missing, data, '\"'));
+                        if (data.foreign) {
+                            rowsWithForeign.push({
+                                ...data,
+                                localField: missing,
+                            });
+                        }
                     }
 
                     const query = "ALTER TABLE \"" + this.getTable(tableName) + "\" " + fieldStrings.join(", ");
                     await this._query(query);
+
+                    for (const rowWithForeign of rowsWithForeign) {
+                        const foreignTable = this.getTable(rowWithForeign.foreign.table.getTable());
+                        const constraintId = `fk_${rowWithForeign.foreign.field}_${foreignTable}`;
+                        const foreignQuery = `FOREIGN KEY ("${rowWithForeign.foreign.field}") REFERENCES "${foreignTable}" ("${rowWithForeign.foreign.field}")`;
+                        const fullQuery = `ALTER TABLE "${this.getTable(tableName)}" ADD CONSTRAINT ${constraintId} ${foreignQuery}`;
+                        await this._query(fullQuery);
+                    }
                 }
                 await this._query(
                     "UPDATE " + this.getTable('table_versions') + " SET version  = $1 WHERE name = $2",

@@ -134,6 +134,17 @@ class FileConnection extends Connection {
             ) {
                 throw new Error(`Field "${field} received data of size ${insertData[field].length}, but expected data of at most length ${fieldData.size}`);
             }
+
+            if (fieldData.foreign) {
+                const allData = await fieldData.foreign.table.search({});
+                const allDataForColumn = allData.map((row) => {
+                    return row[fieldData.foreign.field];
+                });
+
+                if (!allDataForColumn.includes(insertData[field])) {
+                    throw new Error(`Failing foreign key constraint on field '${field}: Value '${insertData[field]}' does not exist in foreign table`);
+                }
+            }
         }
 
         const data = this._readCacheFile(tableName);
@@ -178,6 +189,17 @@ class FileConnection extends Connection {
                 insertData[field].length > fieldData.size
             ) {
                 throw new Error(`Field "${field} received data of size ${insertData[field].length}, but expected data of at most length ${fieldData.size}`);
+            }
+
+            if (fieldData.foreign) {
+                const allData = await fieldData.foreign.table.search({});
+                const allDataForColumn = allData.map((row) => {
+                    return row[fieldData.foreign.field];
+                });
+
+                if (!allDataForColumn.includes(insertData[field])) {
+                    throw new Error(`Failing foreign key constraint on field '${field}: Value '${insertData[field]}' does not exist in foreign table`);
+                }
             }
         }
         

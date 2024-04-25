@@ -134,7 +134,11 @@ A Field is an object with the following parameters:
 | Param | Type | Description |
 |---|---|---|
 | type | FIELD_TYPE | Type of the field. Required |
-| meta | Array | Array of FIELD_META. Not required |
+| meta | Array | Array of FIELD_META. Optional |
+| size | Int | Size of the field. Used with FIELD_TYPE.STRING. Optional |
+| foreign | ForeignKey | Data for any foreign key connections. Optional |
+
+*Note:* The foreign keys must be added as the field is. The system does not know how to add them to an already existing field.
 
 Example:
 
@@ -151,6 +155,15 @@ const tableModel = Model.create({
     version: 1,
 });
 ```
+
+#### ForeignKey
+
+A ForeignKey is data that tells the Model how to create a foreign key relationship.
+
+| Param | Type | Description |
+|---|---|---|
+| table | Model | Model instance of the table to connect to. Required |
+| field | String | Field on foreign table to connect to. Required |
 
 #### FIELD_TYPE
 

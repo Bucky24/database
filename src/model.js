@@ -13,6 +13,10 @@ const modelSchema = object({
                         type: mixed().oneOf(Object.values(FIELD_TYPE)).required(),
                         meta: array().of(mixed().oneOf(Object.values(FIELD_META)).required()),
                         size: number().positive().optional(),
+                        foreign: object({
+                            table: object().required(),
+                            field: string().required(),
+                        }).default(undefined),
                     }),
                 };
             }, {}),
@@ -234,6 +238,10 @@ class Model {
             ...this.fields[field],
             meta: this.fields[field].meta || [],
         }
+    }
+
+    getTable() {
+        return this.table;
     }
 
     processResult(result) {

@@ -53,6 +53,7 @@ describe('model', async () => {
                 const connection = Connection.getDefaultConnection();
                 if (connection) {
                     try {
+                        await connection._query("SET FOREIGN_KEY_CHECKS = 0;");
                         // try to drop all tables
                         const query = "SELECT concat('DROP TABLE IF EXISTS `', table_name, '`;') as `drop` FROM information_schema.tables WHERE table_schema = '" + mysqlAuth.database + "';"
                     
@@ -61,6 +62,7 @@ describe('model', async () => {
                         for (const dropStatement of tableDropStatements) {
                             await connection._query(dropStatement.drop);
                         }
+                        await connection._query("SET FOREIGN_KEY_CHECKS = 1;");
                     } catch (err) {
                         console.error(err);
                     }
@@ -83,9 +85,28 @@ describe('model', async () => {
                 if (connection) {
                     try {
                         // try to drop all tables
-                        const query = "SELECT concat('DROP TABLE IF EXISTS \"', tablename, '\";') as drop FROM pg_catalog.pg_tables WHERE schemaname = 'public';";
+                        const query = "SELECT tablename, concat('DROP TABLE IF EXISTS \"', tablename, '\";') as drop FROM pg_catalog.pg_tables WHERE schemaname = 'public';";
                     
                         const tableDropStatements = await connection._query(query);
+
+                        for (const dropStatement of tableDropStatements.rows) {
+                            // get all constraints for this table
+                            const results = await connection._query(`SELECT con.conname
+                            FROM pg_catalog.pg_constraint con
+                                 INNER JOIN pg_catalog.pg_class rel
+                                            ON rel.oid = con.conrelid
+                                 INNER JOIN pg_catalog.pg_namespace nsp
+                                            ON nsp.oid = connamespace
+                            WHERE nsp.nspname = 'public'
+                                  AND rel.relname = '${dropStatement.tablename}';`);
+                            for (const result of results.rows) {
+                                // can't drop primary keys very easily
+                                if (result.conname.includes("pkey")) {
+                                    continue;
+                                }
+                                await connection._query(`ALTER TABLE "${dropStatement.tablename}" DROP CONSTRAINT "${result.conname}"`);
+                            }
+                        }
 
                         for (const dropStatement of tableDropStatements.rows) {
                             await connection._query(dropStatement.drop);
@@ -112,7 +133,7 @@ describe('model', async () => {
                 await connectionActions.teardown();
                 Connection.setDefaultConnection(null);
             });
-        
+
             describe('setup', () => {
                 it('should error when no default connection set', async () => {
                     Connection.setDefaultConnection(null);
@@ -168,6 +189,94 @@ describe('model', async () => {
                     await assertThrows(async () => {
                         await model.update(id, {
                             foo: 'sdfklsdjfdlskfjdflkfjsdlfksjfkdasl',
+                        });
+                    });
+                });
+
+                it('should create a foreign key when desired', async () => {
+                    const model = Model.create({
+                        table: "table",
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                            },
+                        },
+                        version: 1,
+                    });
+                    const model2 = Model.create({
+                        table: "table2",
+                        fields: {
+                            table1_id: {
+                                type: FIELD_TYPE.INT,
+                                foreign: {
+                                    table: model,
+                                    field: "id",
+                                },
+                            },
+                        },
+                        version: 1,
+                    });
+                    await model.init();
+                    await model2.init();
+                    const id = await model.insert({
+                        foo: 'sdfklsdjfdlskfjdflkfjsdlfksjfkdasl',
+                    });
+                    await assertThrows(async () => {
+                        await model2.insert({
+                            table1_id: 5,
+                        });
+                    });
+                    const id2 = await model2.insert({
+                        table1_id: id,
+                    });
+                    await assertThrows(async () => {
+                        await model2.update(id2, {
+                            table1_id: 5,
+                        });
+                    });
+                });
+
+                it('should create a new foreign key when adding new table columns', async () => {
+                    const model = Model.create({
+                        table: "table",
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                            },
+                        },
+                        version: 1,
+                    });
+                    let model2 = Model.create({
+                        table: "table2",
+                        fields: {
+                            foo: { type: FIELD_TYPE.STRING }
+                        },
+                        version: 1,
+                    });
+                    await model.init();
+                    await model2.init();
+
+                    // now add the foreign key
+                    model2 = Model.create({
+                        table: "table2",
+                        fields: {
+                            foo: { type: FIELD_TYPE.STRING },
+                            table1_id: {
+                                type: FIELD_TYPE.INT,
+                                foreign: {
+                                    table: model,
+                                    field: "id",
+                                },
+                            },
+                        },
+                        version: 2,
+                    });
+                    await model2.init();
+
+                    // should now be enforced
+                    await assertThrows(async () => {
+                        await model2.insert({
+                            table1_id: 5,
                         });
                     });
                 });

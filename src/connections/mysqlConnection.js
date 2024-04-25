@@ -131,6 +131,14 @@ class MysqlConnection extends Connection {
         return fieldRow;
     }
 
+    _getForeignConstraintString(rowWithForeign) {
+        const foreignData = rowWithForeign.foreign;
+        const foreignTable = this.getTable(foreignData.table.getTable());
+        const sql = `FOREIGN KEY (\`${rowWithForeign.localField}\`) REFERENCES \`${foreignTable}\`(\`${foreignData.field}\`)`;
+
+        return sql;
+    }
+
     static _generateWhere(whereClause) {
         const fieldList = [];
         const values = [];
@@ -180,6 +188,7 @@ class MysqlConnection extends Connection {
             let creationQuery = "CREATE TABLE `" + this.getTable(tableName) + "` ("
 
             let autoColumn = null;
+            const rowsWithForeign = [];
             const fieldList = Object.keys(fields).map((fieldName) => {
                 const data = fields[fieldName];
 
@@ -187,11 +196,22 @@ class MysqlConnection extends Connection {
                     autoColumn = fieldName;
                 }
 
+                if (data.foreign) {
+                    rowsWithForeign.push({
+                        ...data,
+                        localField: fieldName,
+                    });
+                }
+
                 return MysqlConnection._getFieldCreationString(fieldName, data, '');
             });
 
             if (autoColumn) {
                 fieldList.push("PRIMARY KEY (" + autoColumn + ")");
+            }
+
+            for (const rowWithForeign of rowsWithForeign) {
+                fieldList.push(this._getForeignConstraintString(rowWithForeign));
             }
 
             creationQuery += fieldList.join(", ");
@@ -222,13 +242,26 @@ class MysqlConnection extends Connection {
 
                 if (missingInDb.length > 0) {
                     const fieldStrings = [];
+                    const rowsWithForeign = [];
                     for (const missing of missingInDb) {
                         const data = fields[missing];
                         fieldStrings.push("ADD COLUMN " + MysqlConnection._getFieldCreationString(missing, data, '`'));
+                        if (data.foreign) {
+                            rowsWithForeign.push({
+                                ...data,
+                                localField: missing,
+                            });
+                        }
                     }
 
                     const query = "ALTER TABLE `" + this.getTable(tableName) + "` " + fieldStrings.join(", ");
                     await this._query(query);
+
+                    for (const rowWithForeign of rowsWithForeign) {
+                        const foreignQuery = this._getForeignConstraintString(rowWithForeign);
+                        const fullQuery = `ALTER TABLE \`${this.getTable(tableName)}\` ADD CONSTRAINT ${foreignQuery}`;
+                        await this._query(fullQuery);
+                    }
                 }
                 await this._query(
                     "UPDATE " + this.getTable('table_versions') + " SET version  = ? WHERE name = ?",
