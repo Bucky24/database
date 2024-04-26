@@ -100,6 +100,8 @@ class MysqlConnection extends Connection {
             if (e.message.includes('Connection lost') || e.message.includes('The client was disconnected') || e.message.includes('read ECONNRESET')) {
                 this.log('Database server terminated the connection');
                 this.close();
+            } else if (e.code === "ER_BAD_DB_ERROR") {
+                throw new Error(`Database ${this.connectionData.database} does not exist, please create it manually.`);
             } else {
                 console.error(e);
             }
