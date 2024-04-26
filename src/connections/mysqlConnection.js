@@ -101,7 +101,7 @@ class MysqlConnection extends Connection {
                 this.log('Database server terminated the connection');
                 this.close();
             } else if (e.code === "ER_BAD_DB_ERROR") {
-                throw new Error(`Database ${this.connectionData.database} does not exist, please create it manually.`);
+                this.log(`Database ${this.connectionData.database} does not exist, please create it manually with \n\nCREATE DATABASE ${this.connectionData.database};\n\n`);
             } else {
                 console.error(e);
             }
