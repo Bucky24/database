@@ -1,6 +1,7 @@
 const { object, string, number, lazy, mixed, array } = require("yup");
 
 const { getDefaultConnection, FIELD_TYPE, FIELD_META, ORDER } = require('./connections');
+const { WhereBuilder } = require("./whereBuilder");
 
 const modelSchema = object({
     table: string().required(),
@@ -297,8 +298,14 @@ class Model {
         if (connection === null) {
             throw new Error('No default connection set');
         }
-        
-        const keys = Object.keys(queryData);
+
+        let keys = [];
+        if (queryData instanceof WhereBuilder) {
+            keys = queryData.getAllFields();
+        } else {
+            keys = Object.keys(queryData);
+        }
+
         for (let i=0;i<keys.length;i++) {
             const key = keys[0];
             const data = this.getFieldData(key);

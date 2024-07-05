@@ -354,3 +354,77 @@ To create these methods, the `createCrudApis` method can be called, with the fol
 | Key | Type | Description |
 |---|---|---|
 | middleware | Function | Function[] | A singular or array of functions confirming to Express Middleware |
+
+## WhereBuilder
+
+The `WhereBuilder` is a flexible way to define more complex queries. You can use its interface to create complex `where` clauses that aren't possible with the normal `search` functions.
+
+### Use
+
+To use `WhereBuilder`, you can create a new instance of it using the `new` function:
+
+```
+$results = await SomeModel.search(WhereBuilder.new().compare(...));
+```
+
+### Methods
+
+#### new
+
+This method creates a new instance of WhereBuilder. You can use the `new` keyword as well, but this method returns the new instance so that you can chain other methods onto it.
+
+Example:
+
+```
+WhereBuilder.new()
+```
+
+#### compare
+
+This method adds a comparison on a single field and a value or array of values.
+
+| Param | Type | Description |
+| -- | -- |
+| field | String | The field name to compare |
+| operator | WHERE_COMPARE | The comparison operator to use |
+| value | Mixed | The value to compare on |
+
+*Note* If the operator is `EQ` or `NE`, the `value` can be an array.
+
+```
+WhereBuilder.new()
+    .compare("field", WHERE_COMPARE.EQ, 5)
+    .compare("field2", WHERE_COMPARE.GT, 10)
+```
+
+#### and
+
+This method allows adding an `AND` check into the builder.
+
+*Note* A `WhereBuilder` acts as an `and` type by default, to allow multiple comparisons (and to mimic hte default of passing a normal object into `search`)
+
+| Param | Type | Description |
+| -- | -- |
+| callback | Function | This callback function will be called with a `WhereBuilder` as its first argument.
+
+```
+WhereBuilder.new()
+    .and((builder) => {
+        builder.compare("field", WHERE_COMPARE.EQ, 5)
+            .compare("field2", WHERE_COMPARE.NE, 10)
+    });
+
+#### or
+
+This method allows adding an `OR` check into the builder.
+
+| Param | Type | Description |
+| -- | -- |
+| callback | Function | This callback function will be called with a `WhereBuilder` as its first argument.
+
+```
+WhereBuilder.new()
+    .or((builder) => {
+        builder.compare("field", WHERE_COMPARE.EQ, 5)
+            .compare("field2", WHERE_COMPARE.NE, 10)
+    });

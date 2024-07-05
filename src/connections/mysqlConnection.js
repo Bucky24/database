@@ -1,3 +1,4 @@
+const { WhereBuilder, WHERE_COMPARE, WHERE_TYPE } = require('../whereBuilder');
 const { Connection, FIELD_TYPE, FIELD_META, ORDER } = require('./connection');
 
 class MysqlConnection extends Connection {
@@ -141,32 +142,116 @@ class MysqlConnection extends Connection {
         return sql;
     }
 
-    static _generateWhere(whereClause) {
-        const fieldList = [];
-        const values = [];
-        Object.keys(whereClause).forEach((key) => {
-            const value = whereClause[key];
-            if (Array.isArray(value)) {
-                const questionList = [];
-                for (const item of value) {
-                    questionList.push('?');
-                    values.push(item);
-                }
-                fieldList.push(`${key} in (${questionList.join(', ')})`);
-            } else if (value === null) {
-                fieldList.push(`${key} is null`);
-            } else if (value === false) {
-                fieldList.push(`(${key} = 0 || ${key} is null)`)
-            } else {
-                fieldList.push(`${key} = ?`);
-                values.push(whereClause[key]);
+    static _getEquality(key, value, negated = false) {
+        if (Array.isArray(value)) {
+            const values = [];
+            const questionList = [];
+            for (const item of value) {
+                questionList.push('?');
+                values.push(item);
             }
-        });
+            return {
+                where: `${key} ${negated ? 'not in' : 'in'} (${questionList.join(', ')})`,
+                values,
+            };
+        } else if (value === null) {
+            return {
+                where: `${key} ${negated ? 'is not' : 'is'} null`,
+                values: [],
+            };
+        } else if (value === false) {
+            if (negated) {
+                return {
+                    where: `(${key} != 0 && ${key} is not null)`,
+                    values: [],
+                };
+            }
+            return {
+                where: `(${key} = 0 || ${key} is null)`,
+                values: [],
+            };
+        } else {
+            return {
+                where: `${key} ${negated ? '!=' : '='} ?`,
+                values: [value],
+            };
+        }
+    }
 
-        return {
-            fieldList,
-            values,
-        };
+    static _generateWhere(whereClause) {
+        if (whereClause instanceof WhereBuilder) {
+            if (whereClause.type === WHERE_TYPE.COMPARE) {
+                if (whereClause.comparison === WHERE_COMPARE.EQ) {
+                    return MysqlConnection._getEquality(whereClause.field, whereClause.value);
+                } else if (whereClause.comparison === WHERE_COMPARE.NE) {
+                    return MysqlConnection._getEquality(whereClause.field, whereClause.value, true);
+                } else if (whereClause.comparison === WHERE_COMPARE.LT) {
+                    return {
+                        where: `${whereClause.field} < ?`,
+                        values: [whereClause.value],
+                    };
+                } else if (whereClause.comparison === WHERE_COMPARE.LTE) {
+                    return {
+                        where: `${whereClause.field} <= ?`,
+                        values: [whereClause.value],
+                    };
+                } else if (whereClause.comparison === WHERE_COMPARE.GT) {
+                    return {
+                        where: `${whereClause.field} > ?`,
+                        values: [whereClause.value],
+                    };
+                } else if (whereClause.comparison === WHERE_COMPARE.GTE) {
+                    return {
+                        where: `${whereClause.field} >= ?`,
+                        values: [whereClause.value],
+                    };
+                } else {
+                    throw new Error(`Unknown WhereBuilder Compare type ${whereClause.comparison}`);
+                }
+            } else if (whereClause.type === WHERE_TYPE.AND) {
+                const fieldList = [];
+                let values = [];
+                for (const child of whereClause.children) {
+                    const { values: childValues, where } = MysqlConnection._generateWhere(child);
+                    fieldList.push(`(${where})`);
+                    values = [...values,...childValues];
+                }
+
+                return {
+                    where: fieldList.join(" AND "),
+                    values,
+                };
+            } else if (whereClause.type === WHERE_TYPE.OR) {
+                const fieldList = [];
+                let values = [];
+                for (const child of whereClause.children) {
+                    const { values: childValues, where } = MysqlConnection._generateWhere(child);
+                    fieldList.push(`(${where})`);
+                    values = [...values,...childValues];
+                }
+
+                return {
+                    where: fieldList.join(" OR "),
+                    values,
+                };
+            } else {
+                throw new Error(`Unknown WhereBuilder type ${whereClause.type}`);
+            }
+        } else {
+            const fieldList = [];
+            let values = [];
+            Object.keys(whereClause).forEach((key) => {
+                const value = whereClause[key];
+                const { values: childValues, where } = MysqlConnection._getEquality(key, value);
+                fieldList.push(where);
+                values = [...values,...childValues];
+            });
+
+            return {
+                where: fieldList.join(" AND "),
+                values, 
+            };
+        }
     }
 
     async initializeTable(tableName, fields, version) {
@@ -297,10 +382,10 @@ class MysqlConnection extends Connection {
     async search(tableName, whereClause, order, limit, offset) {
         let query = "SELECT * FROM `" + tableName + "`";
 
-        const { fieldList, values } = MysqlConnection._generateWhere(whereClause);
+        const { where, values } = MysqlConnection._generateWhere(whereClause);
 
-        if (fieldList.length > 0) {
-            query += " WHERE " + fieldList.join(" AND ");
+        if (where.length > 0) {
+            query += " WHERE " + where;
         }
 
         if (order) {
@@ -323,7 +408,6 @@ class MysqlConnection extends Connection {
         }
 
         if (limit) {
-
             query += " LIMIT ?";
             values.push(limit.toString());
     
@@ -343,10 +427,10 @@ class MysqlConnection extends Connection {
     async count(tableName, whereClause) {
         let query = "SELECT COUNT(*) as `count` FROM `" + tableName + "`";
 
-        const { fieldList, values } = MysqlConnection._generateWhere(whereClause);
+        const { where, values } = MysqlConnection._generateWhere(whereClause);
 
-        if (fieldList.length > 0) {
-            query += " WHERE " + fieldList.join(" AND ");
+        if (where.length > 0) {
+            query += " WHERE " + where;
         }
 
         const results = await this._query(query, values);

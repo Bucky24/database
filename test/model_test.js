@@ -5,6 +5,7 @@ const express = require('express');
 const request = require('supertest');
 
 const { Model, FIELD_META, FIELD_TYPE, ORDER } = require('../src/model');
+const { WhereBuilder, WHERE_COMPARE } = require("../src/whereBuilder");
 const Connection = require('../src/connections');
 const mysqlAuth = require('./db_mysql.json');
 const postgresAuth = require('./db_postgres.json');
@@ -740,6 +741,28 @@ describe('model', async () => {
                     const rows = await model.search({}, null, 50, 2);
                     assert.equal(rows.length, 1);
                     assert.equal(rows[0]['foo'], 'foo3');
+                });
+
+                it('should work with WhereBuilder', async () => {
+                    const model = Model.create({
+                        table: "table", 
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                            },
+                        },
+                        version: 1,
+                    });
+                    await model.init();
+                    await model.insert({ foo: 'foo1' });
+                    await model.insert({ foo: 'foo2' });
+                    await model.insert({ foo: 'foo3' });
+
+                    const rows = await model.search(WhereBuilder.new()
+                        .compare("foo", WHERE_COMPARE.EQ, "foo2")
+                    );
+                    assert.equal(rows.length, 1);
+                    assert.equal(rows[0]['foo'], 'foo2');
                 });
             });
             

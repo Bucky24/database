@@ -1,3 +1,4 @@
+const { WhereBuilder, WHERE_COMPARE, WHERE_TYPE } = require('../whereBuilder');
 const { Connection, FIELD_META, FIELD_TYPE, ORDER } = require('./connection');
 
 class PostgresConnection extends Connection {
@@ -103,36 +104,139 @@ class PostgresConnection extends Connection {
         return fieldRow;
     }
 
-    static _getWhere(whereClause) {
-        const fieldList = [];
-        const values = [];
-        let questionCount = 0;
-        Object.keys(whereClause).forEach((key) => {
-            const value = whereClause[key];
-            if (Array.isArray(value)) {
-                const questionList = [];
-                for (const item of value) {
-                    questionList.push("$" + (questionCount + 1));
-                    questionCount ++;
-                    values.push(item);
-                }
-                fieldList.push(`${key} in (${questionList.join(', ')})`);
-            } else if (value === null) {
-                fieldList.push(`${key} is null`);
-            } else if (value === false) {
-                fieldList.push(`(${key} = false or ${key} is null)`);
-            } else {
-                fieldList.push(`${key} = $${questionCount + 1}`);
+    static _getEquality(key, value, questionCount, negated = false) {
+        if (Array.isArray(value)) {
+            const values = [];
+            const questionList = [];
+            for (const item of value) {
+                values.push(item);
+                questionList.push("$" + (questionCount + 1));
                 questionCount ++;
-                values.push(whereClause[key]);
             }
-        });
 
-        return {
-            fieldList,
-            values,
-            questionCount,
-        };
+            return {
+                where: `${key} ${negated ? 'not in' : 'in'} (${questionList.join(', ')})`,
+                values,
+            };
+        } else if (value === null) {
+            return {
+                where: `${key} ${negated ? 'is not': 'is'} null`,
+                values: [],
+            };
+        } else if (value === false) {
+            if (negated) {
+                return {
+                    where: `(${key} != false and ${key} is not null)`,
+                    values: [],
+                };
+            }
+            return {
+                where: `(${key} = false or ${key} is null)`,
+                values: [],
+            };
+        } else {
+            return {
+                where: `${key} ${negated ? '!=' : '='} $${questionCount + 1}`,
+                values: [value],
+            };
+        }
+    }
+
+    static _getWhere(whereClause, questionCount = 0) {
+        if (whereClause instanceof WhereBuilder) {
+            if (whereClause.type === WHERE_TYPE.COMPARE) {
+                if (whereClause.comparison === WHERE_COMPARE.EQ) {
+                    const { values, where } = PostgresConnection._getEquality(whereClause.field, whereClause.value, questionCount);
+
+                    return {
+                        where,
+                        values,
+                        questionCount: questionCount + values.length,
+                    };
+                } else if (whereClause.comparison === WHERE_COMPARE.NE) {
+                    const { values, where } = PostgresConnection._getEquality(whereClause.field, whereClause.value, questionCount, true);
+
+                    return {
+                        where,
+                        values,
+                        questionCount: questionCount + values.length,
+                    };
+                } else if (whereClause.comparison === WHERE_COMPARE.LT) {
+                    return {
+                        where: `"${whereClause.field}" < $${questionCount+1}`,
+                        values: [whereClause.value],
+                        questionCount: questionCount + 1,
+                    };
+                } else if (whereClause.comparison === WHERE_COMPARE.LTE) {
+                    return {
+                        where: `"${whereClause.field}" <= $${questionCount+1}`,
+                        values: [whereClause.value],
+                        questionCount: questionCount + 1,
+                    };
+                } else if (whereClause.comparison === WHERE_COMPARE.GT) {
+                    return {
+                        where: `"${whereClause.field}" > $${questionCount+1}`,
+                        values: [whereClause.value],
+                        questionCount: questionCount + 1,
+                    };
+                } else if (whereClause.comparison === WHERE_COMPARE.GTE) {
+                    return {
+                        where: `"${whereClause.field}" >= $${questionCount+1}`,
+                        values: [whereClause.value],
+                        questionCount: questionCount + 1,
+                    };
+                } else {
+                    throw new Error(`Unknown WhereBuilder Compare type ${whereClause.comparison}`);
+                }
+            } else if (whereClause.type === WHERE_TYPE.AND) {
+                const fieldList = [];
+                let values = [];
+                for (const child of whereClause.children) {
+                    const { values: childValues, where } = PostgresConnection._getWhere(child, questionCount);
+                    fieldList.push(`(${where})`);
+                    values = [...values,...childValues];
+                    questionCount += values.length;
+                }
+
+                return {
+                    where: fieldList.join(" AND "),
+                    values,
+                };
+            } else if (whereClause.type === WHERE_TYPE.OR) {
+                const fieldList = [];
+                let values = [];
+                for (const child of whereClause.children) {
+                    const { values: childValues, where } = PostgresConnection._getWhere(child, questionCount);
+                    fieldList.push(`(${where})`);
+                    values = [...values,...childValues];
+                    questionCount += values.length;
+                }
+
+                return {
+                    where: fieldList.join(" OR "),
+                    values,
+                };
+            } else {
+                throw new Error(`Unknown WhereBuilder type ${whereClause.type}`);
+            }
+        } else {
+            const fieldList = [];
+            let values = [];
+            Object.keys(whereClause).forEach((key) => {
+                const value = whereClause[key];
+                const { values: childValues, where } = PostgresConnection._getEquality(key, value, questionCount);
+                
+                questionCount += childValues.length;
+                fieldList.push(where);
+                values = [...values,...childValues];
+            });
+
+            return {
+                where: fieldList.join(" AND "),
+                values,
+                questionCount,
+            };
+        }
     }
 
     async initializeTable(tableName, fields, version) {
@@ -277,10 +381,10 @@ class PostgresConnection extends Connection {
     async search(tableName, whereClause, order, limit, offset) {
         let query = "SELECT * FROM \"" + tableName + "\"";
 
-        let { fieldList, values, questionCount } = PostgresConnection._getWhere(whereClause);
+        let { where, values, questionCount } = PostgresConnection._getWhere(whereClause);
 
-        if (fieldList.length > 0) {
-            query += " WHERE " + fieldList.join(" AND ");
+        if (where.length > 0) {
+            query += " WHERE " + where;
         }
 
         if (order) {
@@ -322,10 +426,10 @@ class PostgresConnection extends Connection {
     async count(tableName, whereClause) {
         let query = "SELECT COUNT(*) as \"count\" FROM \"" + tableName + "\"";
 
-        let { fieldList, values, questionCount } = PostgresConnection._getWhere(whereClause);
+        let { where, values } = PostgresConnection._getWhere(whereClause);
 
-        if (fieldList.length > 0) {
-            query += " WHERE " + fieldList.join(" AND ");
+        if (where.length > 0) {
+            query += " WHERE " + where;
         }
 
         const results = await this._query(query, values);
