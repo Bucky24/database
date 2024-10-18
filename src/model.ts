@@ -1,7 +1,9 @@
-const { object, string, number, lazy, mixed, array } = require("yup");
+import { object, string, number, lazy, mixed, array } from "yup";
 
-const { getDefaultConnection, FIELD_TYPE, FIELD_META, ORDER } = require('./connections');
-const { WhereBuilder } = require("./whereBuilder");
+import { getDefaultConnection } from './connections';
+import { WhereBuilder } from "./whereBuilder";
+import { Field, FIELD_META, FIELD_TYPE, Fields } from "./types";
+import type { Express, Request, RequestParamHandler, Response } from 'express';
 
 const modelSchema = object({
     table: string().required(),
@@ -26,42 +28,59 @@ const modelSchema = object({
     version: number().required().integer(),
 });
 
+interface ModelSettings {
+    table: string;
+    fields: Fields;
+    version: number;
+}
+
+interface FieldWithId extends Field {
+    id: string;
+};
+
+type Middleware = RequestParamHandler;
+
+interface RouteOptions {
+    middleware?: Middleware | Middleware[];
+}
+
 class Model {
-    static create(settings) {
+    private table: string;
+    private fields: Fields;
+    private fieldList: FieldWithId[];
+    private version: number;
+
+    constructor(settings: ModelSettings) {
+        this.table = settings.table;
+        this.fields = settings.fields;
+        this.fieldList = [];
+        Object.keys(settings.fields).forEach((key: string) => {
+            const field = settings.fields[key];
+            this.fieldList.push({
+                ...field,
+                id: key,
+            });
+        });
+        this.version = settings.version;
+    }
+
+    static create(settings: ModelSettings) {
         try {
             const { table, fields, version } = modelSchema.validateSync(settings);
-            const model = new Model(settings);
-            model.table = table;
-            model.fields = {
-                id: {
-                    type: FIELD_TYPE.INT,
-                    meta: [
-                        FIELD_META.AUTO,
-                    ],
-                },
-                ...fields,
-            };
-            model.fieldList = Object.keys(model.fields).map((key) => {
-                const field = model.fields[key];
-                return {
-                    ...field,
-                    id: key,
-                };
-            });
-            model.version = version;
+            const model = new Model({ table, fields, version });
 
             return model;
-        } catch (error) {
+        } catch (error: any) {
             throw new Error(`${error.message} with data ${JSON.stringify(settings)}`);
         }
     }
 
-    createCrudApis(app, options = {}) {
+    createCrudApis(app: Express, options: RouteOptions = {}) {
         let middleware = options.middleware || [];
         if (!Array.isArray(middleware)) {
             middleware = [middleware];
         }
-        const processBody = (req, res) => {
+        const processBody = (req: Request, res: Response) => {
             if (!req.body) {
                 res.status(400).json({
                     error: 'No json body detected',

@@ -4,7 +4,7 @@ import { Connection } from './connection';
 import { WhereBuilder, WHERE_TYPE, WHERE_COMPARE } from '../whereBuilder';
 import { FIELD_META, FIELD_TYPE, Fields, NestedObject, ORDER, OrderObj } from '../types';
 
-export class FileConnection extends Connection {
+export default class FileConnection extends Connection {
     private cacheDir: string;
 
     constructor(cacheDir: string, prefix = null) {

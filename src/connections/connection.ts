@@ -54,11 +54,11 @@ export class Connection {
         throw new Error("Connection must override initalizeTable");
     }
 
-    async search(tableName: string, whereClause: WhereBuilder | NestedObject, order?: OrderObj, limit?: number): Promise<any[]> {
+    async search(tableName: string, whereClause: WhereBuilder | NestedObject, order?: OrderObj, limit?: number, offset?: number): Promise<any[]> {
         throw new Error("Connection must override search");
     }
 
-    async update(tableName: string, id: number, update: NestedObject, tableFields: Fields): Promise<number> {
+    async update(tableName: string, id: number, update: NestedObject, tableFields: Fields): Promise<any> {
         throw new Error("Connection must override update");
     }
 

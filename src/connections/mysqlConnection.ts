@@ -1,15 +1,15 @@
-import { Field, FIELD_META, FIELD_TYPE, FieldWithForeign } from "../types";
+import { Field, FIELD_META, FIELD_TYPE, Fields, FieldWithForeign, NestedObject, ORDER, OrderObj } from "../types";
 import { WhereBuilder, WHERE_COMPARE, WHERE_TYPE } from "../whereBuilder";
 import { Connection } from './connection';
 
-interface MysqlConnectionObject {
+export interface MysqlConnectionObject {
     host: string;
     user: string;
     password: string;
     database: string;
 }
 
-interface MysqlConnectionUrl {
+export interface MysqlConnectionUrl {
     url: string;
 }
 
@@ -18,7 +18,12 @@ interface MysqlError {
     message: string;
 }
 
-class MysqlConnection extends Connection {
+interface MysqlWhereData {
+    where: string;
+    values: any[];
+}
+
+export default class MysqlConnection extends Connection {
     private initialConnectionData: MysqlConnectionObject | MysqlConnectionUrl;
     private connectionData: MysqlConnectionObject | null;
 
@@ -29,7 +34,7 @@ class MysqlConnection extends Connection {
         this.connectionData = null;
     }
 
-    async _query(query: string, bind: any[]) {
+    async _query(query: string, bind?: any[]): Promise<any> {
         if (bind) {
             for (const item of bind) {
                 if (item === undefined) {
@@ -114,7 +119,7 @@ class MysqlConnection extends Connection {
         }
 
         // don't attempt to load this until we actually need it
-        const mysql = require('mysql2');
+        const mysql = await import('mysql2');
         const connection = mysql.createConnection(this.connectionData);
 
         connection.on('error', (e: MysqlError) => {
@@ -162,7 +167,7 @@ class MysqlConnection extends Connection {
         return sql;
     }
 
-    static _getEquality(key, value, negated = false) {
+    static _getEquality(key: string | null, value: any, negated = false) {
         if (Array.isArray(value)) {
             const values = [];
             const questionList = [];
@@ -198,40 +203,40 @@ class MysqlConnection extends Connection {
         }
     }
 
-    static _generateWhere(whereClause) {
+    static _generateWhere(whereClause: WhereBuilder | NestedObject): MysqlWhereData {
         if (whereClause instanceof WhereBuilder) {
-            if (whereClause.type === WHERE_TYPE.COMPARE) {
-                if (whereClause.comparison === WHERE_COMPARE.EQ) {
-                    return MysqlConnection._getEquality(whereClause.field, whereClause.value);
-                } else if (whereClause.comparison === WHERE_COMPARE.NE) {
-                    return MysqlConnection._getEquality(whereClause.field, whereClause.value, true);
-                } else if (whereClause.comparison === WHERE_COMPARE.LT) {
+            if (whereClause.getType() === WHERE_TYPE.COMPARE) {
+                if (whereClause.getComparison() === WHERE_COMPARE.EQ) {
+                    return MysqlConnection._getEquality(whereClause.getField(), whereClause.getValue());
+                } else if (whereClause.getComparison() === WHERE_COMPARE.NE) {
+                    return MysqlConnection._getEquality(whereClause.getField(), whereClause.getValue(), true);
+                } else if (whereClause.getComparison() === WHERE_COMPARE.LT) {
                     return {
-                        where: `${whereClause.field} < ?`,
-                        values: [whereClause.value],
+                        where: `${whereClause.getField()} < ?`,
+                        values: [whereClause.getValue()],
                     };
-                } else if (whereClause.comparison === WHERE_COMPARE.LTE) {
+                } else if (whereClause.getComparison() === WHERE_COMPARE.LTE) {
                     return {
-                        where: `${whereClause.field} <= ?`,
-                        values: [whereClause.value],
+                        where: `${whereClause.getField()} <= ?`,
+                        values: [whereClause.getValue()],
                     };
-                } else if (whereClause.comparison === WHERE_COMPARE.GT) {
+                } else if (whereClause.getComparison() === WHERE_COMPARE.GT) {
                     return {
-                        where: `${whereClause.field} > ?`,
-                        values: [whereClause.value],
+                        where: `${whereClause.getField()} > ?`,
+                        values: [whereClause.getValue()],
                     };
-                } else if (whereClause.comparison === WHERE_COMPARE.GTE) {
+                } else if (whereClause.getComparison() === WHERE_COMPARE.GTE) {
                     return {
-                        where: `${whereClause.field} >= ?`,
-                        values: [whereClause.value],
+                        where: `${whereClause.getField()} >= ?`,
+                        values: [whereClause.getValue()],
                     };
                 } else {
-                    throw new Error(`Unknown WhereBuilder Compare type ${whereClause.comparison}`);
+                    throw new Error(`Unknown WhereBuilder Compare type ${whereClause.getComparison()}`);
                 }
-            } else if (whereClause.type === WHERE_TYPE.AND) {
+            } else if (whereClause.getType() === WHERE_TYPE.AND) {
                 const fieldList = [];
-                let values = [];
-                for (const child of whereClause.children) {
+                let values: any[] = [];
+                for (const child of whereClause.getChildren()) {
                     const { values: childValues, where } = MysqlConnection._generateWhere(child);
                     fieldList.push(`(${where})`);
                     values = [...values,...childValues];
@@ -241,10 +246,10 @@ class MysqlConnection extends Connection {
                     where: fieldList.join(" AND "),
                     values,
                 };
-            } else if (whereClause.type === WHERE_TYPE.OR) {
+            } else if (whereClause.getType() === WHERE_TYPE.OR) {
                 const fieldList = [];
-                let values = [];
-                for (const child of whereClause.children) {
+                let values: any[] = [];
+                for (const child of whereClause.getChildren()) {
                     const { values: childValues, where } = MysqlConnection._generateWhere(child);
                     fieldList.push(`(${where})`);
                     values = [...values,...childValues];
@@ -255,11 +260,11 @@ class MysqlConnection extends Connection {
                     values,
                 };
             } else {
-                throw new Error(`Unknown WhereBuilder type ${whereClause.type}`);
+                throw new Error(`Unknown WhereBuilder type ${whereClause.getType()}`);
             }
         } else {
-            const fieldList = [];
-            let values = [];
+            const fieldList: string[] = [];
+            let values: any[] = [];
             Object.keys(whereClause).forEach((key) => {
                 const value = whereClause[key];
                 const { values: childValues, where } = MysqlConnection._getEquality(key, value);
@@ -274,7 +279,10 @@ class MysqlConnection extends Connection {
         }
     }
 
-    async initializeTable(tableName, fields, version) {
+    async initializeTable(tableName: string, fields: Fields, version: number) {
+        if (!this.connectionData) {
+            throw new Error('No connection');
+        }
         const getVersionsQuery = "SELECT * FROM information_schema.tables WHERE table_schema = '" + this.connectionData.database + "' AND table_name = '" + this.getTable('table_versions') + "' LIMIT 1;"
 
         const tableResult = await this._query(getVersionsQuery);
@@ -295,7 +303,7 @@ class MysqlConnection extends Connection {
             let creationQuery = "CREATE TABLE `" + this.getTable(tableName) + "` ("
 
             let autoColumn = null;
-            const rowsWithForeign = [];
+            const rowsWithForeign: FieldWithForeign[] = [];
             const fieldList = Object.keys(fields).map((fieldName) => {
                 const data = fields[fieldName];
 
@@ -306,6 +314,7 @@ class MysqlConnection extends Connection {
                 if (data.foreign) {
                     rowsWithForeign.push({
                         ...data,
+                        foreign: data.foreign,
                         localField: fieldName,
                     });
                 }
@@ -336,7 +345,7 @@ class MysqlConnection extends Connection {
 
                 const oldFields = await this._query("DESCRIBE `" + this.getTable(tableName) + "`");
 
-                const dbFields = oldFields.map((field) => {
+                const dbFields = oldFields.map((field: any) => {
                     return field.Field;
                 });
                 const localFields = Object.keys(fields);
@@ -349,13 +358,14 @@ class MysqlConnection extends Connection {
 
                 if (missingInDb.length > 0) {
                     const fieldStrings = [];
-                    const rowsWithForeign = [];
+                    const rowsWithForeign: FieldWithForeign[] = [];
                     for (const missing of missingInDb) {
                         const data = fields[missing];
                         fieldStrings.push("ADD COLUMN " + MysqlConnection._getFieldCreationString(missing, data, '`'));
                         if (data.foreign) {
                             rowsWithForeign.push({
                                 ...data,
+                                foreign: data.foreign,
                                 localField: missing,
                             });
                         }
@@ -379,12 +389,12 @@ class MysqlConnection extends Connection {
         }
     }
 
-    async insert(tableName, fieldData, insertData) {
+    async insert(tableName: string, fieldData: Fields, insertData: NestedObject) {
         let query = "INSERT INTO `" + this.getTable(tableName) + "` (";
 
-        const fieldList = [];
-        const valueList = [];
-        const valueKeys = [];
+        const fieldList: string[] = [];
+        const valueList: any[] = [];
+        const valueKeys: string[] = [];
 
         Object.keys(insertData).forEach((key) => {
             const value = insertData[key];
@@ -399,7 +409,7 @@ class MysqlConnection extends Connection {
         return result.insertId;
     }
 
-    async search(tableName, whereClause, order, limit, offset) {
+    async search(tableName: string, whereClause: WhereBuilder | NestedObject, order?: OrderObj, limit?: number, offset?: number): Promise<any[]> {
         let query = "SELECT * FROM `" + tableName + "`";
 
         const { where, values } = MysqlConnection._generateWhere(whereClause);
@@ -444,7 +454,7 @@ class MysqlConnection extends Connection {
         return results;
     }
 
-    async count(tableName, whereClause) {
+    async count(tableName: string, whereClause: WhereBuilder | NestedObject) {
         let query = "SELECT COUNT(*) as `count` FROM `" + tableName + "`";
 
         const { where, values } = MysqlConnection._generateWhere(whereClause);
@@ -458,10 +468,10 @@ class MysqlConnection extends Connection {
         return results[0].count;
     }
 
-    async update(tableName, id, update) {
+    async update(tableName: string, id: number, update: NestedObject): Promise<any> {
         let query = "UPDATE `" + this.getTable(tableName) + "` SET ";
 
-        const fieldRows = [];
+        const fieldRows: string[] = [];
         const values = [];
         Object.keys(update).forEach((key) => {
             fieldRows.push(`${key} = ?`);
@@ -475,10 +485,8 @@ class MysqlConnection extends Connection {
         await this._query(query, values);
     }
 
-    async delete(tableName, id) {
+    async delete(tableName: string, id: number) {
         const query = "DELETE FROM `" + this.getTable(tableName) + "` WHERE id = ?";
         await this._query(query, [id]);
     }
 }
-
-module.exports = MysqlConnection;

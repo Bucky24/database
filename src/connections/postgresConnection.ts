@@ -1,22 +1,38 @@
-const { WhereBuilder, WHERE_COMPARE, WHERE_TYPE } = require('../whereBuilder');
-const { Connection, FIELD_META, FIELD_TYPE, ORDER } = require('./connection');
+import { ClientConfig } from 'pg';
+import { WhereBuilder, WHERE_COMPARE, WHERE_TYPE } from '../whereBuilder';
+import { Connection } from './connection';
+import { Field, FIELD_META, FIELD_TYPE, Fields, FieldWithForeign, NestedObject, ORDER, OrderObj } from '../types';
 
-class PostgresConnection extends Connection {
-    constructor(data, prefix = null) {
+export interface PostgresConnectionUrl {
+    url: string;
+}
+
+export interface PostgresWhere {
+    where: string;
+    values: any[];
+    questionCount: number;
+}
+
+export interface PostgresResult {
+    rows: any[];
+}
+
+export default class PostgresConnection extends Connection {
+    private connectionData: ClientConfig | PostgresConnectionUrl;
+
+    constructor(data: ClientConfig | PostgresConnectionUrl, prefix = null) {
         super(prefix);
 
         this.connectionData = data;
     }
 
     async createConnection() {
-        const { Client } = require('pg');
+        const { Client } = await import('pg');
         let client;
 
-        if (this.connectionData.url) {
+        if ("url" in this.connectionData) {
             client = new Client({ connectionString: this.connectionData.url });
         } else {
-            // delete the url from the object to remove nulls
-            delete this.connectionData.url;
             client = new Client(this.connectionData);
         }
 
@@ -31,7 +47,7 @@ class PostgresConnection extends Connection {
         });
     }
 
-    static _getColumnFromType(type, fieldData) {
+    static _getColumnFromType(type: FIELD_TYPE, fieldData: Field) {
         if (type === FIELD_TYPE.INT) {
             return 'INT';
         } else if (type === FIELD_TYPE.STRING) {
@@ -48,7 +64,7 @@ class PostgresConnection extends Connection {
         }
     }
 
-    static _getValueForType(type, value) {
+    static _getValueForType(type: FIELD_TYPE, value: any) {
         if (type === FIELD_TYPE.STRING) {
             return `"${value}"`;
         }
@@ -56,7 +72,7 @@ class PostgresConnection extends Connection {
         return value;
     }
 
-    async _query(query, bind) {
+    async _query(query: string, bind?: any[]): Promise<PostgresResult> {
         // check for undefined bind
         if (bind) {
             for (const item of bind) {
@@ -79,7 +95,7 @@ class PostgresConnection extends Connection {
                     result = await db.query(query);
                 }
                 resolve(result);
-            } catch (error) {
+            } catch (error: any) {
                 if (error.message.startsWith("syntax error")) {
                     reject(new Error("Syntax error for query " + query + ": " + error.message));
                 } else {
@@ -89,7 +105,7 @@ class PostgresConnection extends Connection {
         });
     }
 
-    static _getFieldCreationString(fieldName, data, ticks) {
+    static _getFieldCreationString(fieldName: string, data: Field, ticks: string) {
         let fieldRow = ticks + fieldName + ticks + " " + PostgresConnection._getColumnFromType(data.type, data);
 
         if (data.meta) {
@@ -104,7 +120,7 @@ class PostgresConnection extends Connection {
         return fieldRow;
     }
 
-    static _getEquality(key, value, questionCount, negated = false) {
+    static _getEquality(key: string | null, value: any, questionCount: number, negated = false) {
         if (Array.isArray(value)) {
             const values = [];
             const questionList = [];
@@ -142,56 +158,56 @@ class PostgresConnection extends Connection {
         }
     }
 
-    static _getWhere(whereClause, questionCount = 0) {
+    static _getWhere(whereClause: WhereBuilder | NestedObject, questionCount = 0): PostgresWhere {
         if (whereClause instanceof WhereBuilder) {
-            if (whereClause.type === WHERE_TYPE.COMPARE) {
-                if (whereClause.comparison === WHERE_COMPARE.EQ) {
-                    const { values, where } = PostgresConnection._getEquality(whereClause.field, whereClause.value, questionCount);
+            if (whereClause.getType() === WHERE_TYPE.COMPARE) {
+                if (whereClause.getComparison() === WHERE_COMPARE.EQ) {
+                    const { values, where } = PostgresConnection._getEquality(whereClause.getField(), whereClause.getValue(), questionCount);
 
                     return {
                         where,
                         values,
                         questionCount: questionCount + values.length,
                     };
-                } else if (whereClause.comparison === WHERE_COMPARE.NE) {
-                    const { values, where } = PostgresConnection._getEquality(whereClause.field, whereClause.value, questionCount, true);
+                } else if (whereClause.getComparison() === WHERE_COMPARE.NE) {
+                    const { values, where } = PostgresConnection._getEquality(whereClause.getField(), whereClause.getValue(), questionCount, true);
 
                     return {
                         where,
                         values,
                         questionCount: questionCount + values.length,
                     };
-                } else if (whereClause.comparison === WHERE_COMPARE.LT) {
+                } else if (whereClause.getComparison() === WHERE_COMPARE.LT) {
                     return {
-                        where: `"${whereClause.field}" < $${questionCount+1}`,
-                        values: [whereClause.value],
+                        where: `"${whereClause.getField()}" < $${questionCount+1}`,
+                        values: [whereClause.getValue()],
                         questionCount: questionCount + 1,
                     };
-                } else if (whereClause.comparison === WHERE_COMPARE.LTE) {
+                } else if (whereClause.getComparison() === WHERE_COMPARE.LTE) {
                     return {
-                        where: `"${whereClause.field}" <= $${questionCount+1}`,
-                        values: [whereClause.value],
+                        where: `"${whereClause.getField()}" <= $${questionCount+1}`,
+                        values: [whereClause.getValue()],
                         questionCount: questionCount + 1,
                     };
-                } else if (whereClause.comparison === WHERE_COMPARE.GT) {
+                } else if (whereClause.getComparison() === WHERE_COMPARE.GT) {
                     return {
-                        where: `"${whereClause.field}" > $${questionCount+1}`,
-                        values: [whereClause.value],
+                        where: `"${whereClause.getField()}" > $${questionCount+1}`,
+                        values: [whereClause.getValue()],
                         questionCount: questionCount + 1,
                     };
-                } else if (whereClause.comparison === WHERE_COMPARE.GTE) {
+                } else if (whereClause.getComparison() === WHERE_COMPARE.GTE) {
                     return {
-                        where: `"${whereClause.field}" >= $${questionCount+1}`,
-                        values: [whereClause.value],
+                        where: `"${whereClause.getField()}" >= $${questionCount+1}`,
+                        values: [whereClause.getValue()],
                         questionCount: questionCount + 1,
                     };
                 } else {
-                    throw new Error(`Unknown WhereBuilder Compare type ${whereClause.comparison}`);
+                    throw new Error(`Unknown WhereBuilder Compare type ${whereClause.getComparison()}`);
                 }
-            } else if (whereClause.type === WHERE_TYPE.AND) {
+            } else if (whereClause.getType() === WHERE_TYPE.AND) {
                 const fieldList = [];
-                let values = [];
-                for (const child of whereClause.children) {
+                let values: any[] = [];
+                for (const child of whereClause.getChildren()) {
                     const { values: childValues, where } = PostgresConnection._getWhere(child, questionCount);
                     fieldList.push(`(${where})`);
                     values = [...values,...childValues];
@@ -201,11 +217,12 @@ class PostgresConnection extends Connection {
                 return {
                     where: fieldList.join(" AND "),
                     values,
+                    questionCount,
                 };
-            } else if (whereClause.type === WHERE_TYPE.OR) {
-                const fieldList = [];
-                let values = [];
-                for (const child of whereClause.children) {
+            } else if (whereClause.getType() === WHERE_TYPE.OR) {
+                const fieldList: string[] = [];
+                let values: any[] = [];
+                for (const child of whereClause.getChildren()) {
                     const { values: childValues, where } = PostgresConnection._getWhere(child, questionCount);
                     fieldList.push(`(${where})`);
                     values = [...values,...childValues];
@@ -215,13 +232,14 @@ class PostgresConnection extends Connection {
                 return {
                     where: fieldList.join(" OR "),
                     values,
+                    questionCount,
                 };
             } else {
-                throw new Error(`Unknown WhereBuilder type ${whereClause.type}`);
+                throw new Error(`Unknown WhereBuilder type ${whereClause.getType()}`);
             }
         } else {
-            const fieldList = [];
-            let values = [];
+            const fieldList: string[] = [];
+            let values: any[] = [];
             Object.keys(whereClause).forEach((key) => {
                 const value = whereClause[key];
                 const { values: childValues, where } = PostgresConnection._getEquality(key, value, questionCount);
@@ -239,7 +257,7 @@ class PostgresConnection extends Connection {
         }
     }
 
-    async initializeTable(tableName, fields, version) {
+    async initializeTable(tableName: string, fields: Fields, version: number) {
         // first see if our versions table exists
         const getVersionsQuery = "SELECT * FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename = '" + this.getTable('table_versions') + "' LIMIT 1;"
 
@@ -318,13 +336,14 @@ class PostgresConnection extends Connection {
 
                 if (missingInDb.length > 0) {
                     const fieldStrings = [];
-                    const rowsWithForeign = [];
+                    const rowsWithForeign: FieldWithForeign[] = [];
                     for (const missing of missingInDb) {
                         const data = fields[missing];
                         fieldStrings.push("ADD COLUMN " + PostgresConnection._getFieldCreationString(missing, data, '\"'));
                         if (data.foreign) {
                             rowsWithForeign.push({
                                 ...data,
+                                foreign: data.foreign,
                                 localField: missing,
                             });
                         }
@@ -358,12 +377,12 @@ class PostgresConnection extends Connection {
         }
     }
 
-    async insert(tableName, tableFields, insertData) {
+    async insert(tableName: string, tableFields: Fields, insertData: NestedObject) {
         let query = "INSERT INTO \"" + this.getTable(tableName) + "\" (";
 
-        const fieldList = [];
-        const valueList = [];
-        const valueKeys = [];
+        const fieldList: string[] = [];
+        const valueList: any[] = [];
+        const valueKeys: string[] = [];
 
         Object.keys(insertData).forEach((key, index) => {
             const value = insertData[key];
@@ -378,7 +397,7 @@ class PostgresConnection extends Connection {
         return result.rows[0].id;
     }
 
-    async search(tableName, whereClause, order, limit, offset) {
+    async search(tableName: string, whereClause: WhereBuilder | NestedObject, order?: OrderObj, limit?: number, offset?: number) {
         let query = "SELECT * FROM \"" + tableName + "\"";
 
         let { where, values, questionCount } = PostgresConnection._getWhere(whereClause);
@@ -423,7 +442,7 @@ class PostgresConnection extends Connection {
         return results.rows;
     }
 
-    async count(tableName, whereClause) {
+    async count(tableName: string, whereClause: WhereBuilder | NestedObject) {
         let query = "SELECT COUNT(*) as \"count\" FROM \"" + tableName + "\"";
 
         let { where, values } = PostgresConnection._getWhere(whereClause);
@@ -437,10 +456,10 @@ class PostgresConnection extends Connection {
         return results.rows[0].count;
     }
 
-    async update(tableName, id, update) {
+    async update(tableName: string, id: number, update: NestedObject) {
         let query = "UPDATE \"" + this.getTable(tableName) + "\" SET ";
 
-        const fieldRows = [];
+        const fieldRows: string[] = [];
         const values = [];
         let counter = 1;
         Object.keys(update).forEach((key) => {
@@ -456,7 +475,7 @@ class PostgresConnection extends Connection {
         await this._query(query, values);
     }
 
-    async delete(tableName, id) {
+    async delete(tableName: string, id: number) {
         const query = "DELETE FROM \"" + this.getTable(tableName) + "\" WHERE id = $1";
         await this._query(query, [id]);
     }
