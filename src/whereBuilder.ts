@@ -1,19 +1,26 @@
-const WHERE_TYPE = {
-    AND: 'where/and',
-    OR: 'where/or',
-    COMPARE: 'where/compare',
+export enum WHERE_TYPE {
+    AND='where/and',
+    OR='where/or',
+    COMPARE='where/compare',
 };
 
-const WHERE_COMPARE = {
-    EQ: 'where/eq',
-    NE: 'where/ne',
-    LT: 'where/lt',
-    LTE: 'where/lte',
-    GT: 'where/gt',
-    GTE: 'where/gte',
+export enum WHERE_COMPARE {
+    EQ='where/eq',
+    NE='where/ne',
+    LT='where/lt',
+    LTE='where/lte',
+    GT='where/gt',
+    GTE='where/gte',
 };
 
-class WhereBuilder {
+export class WhereBuilder {
+    private type: WHERE_TYPE;
+    private children: WhereBuilder[];
+    private comparison: WHERE_COMPARE | null;
+    private field: string | null;
+    private value: any;
+    private negated: boolean;
+
     constructor(type = WHERE_TYPE.AND) {
         this.type = type;
         this.children = [];
@@ -27,21 +34,21 @@ class WhereBuilder {
         return new WhereBuilder();
     }
 
-    and(cb) {
+    and(cb: Function) {
         const child = new WhereBuilder(WHERE_TYPE.AND);
         cb(child);
         this.children.push(child);
         return this;
     }
 
-    or(cb) {
+    or(cb: Function) {
         const child = new WhereBuilder(WHERE_TYPE.OR);
         cb(child);
         this.children.push(child);
         return this;
     }
 
-    compare(field, compare, value) {
+    compare(field: string, compare: WHERE_COMPARE, value: any) {
         const child = new WhereBuilder(WHERE_TYPE.COMPARE);
         child.comparison = compare;
         child.field = field;
@@ -55,11 +62,13 @@ class WhereBuilder {
 
     // utils
 
-    getAllFields() {
-        let fields = [];
+    getAllFields(): string[] {
+        let fields: string[] = [];
 
         if (this.type === WHERE_TYPE.COMPARE) {
-            fields.push(this.field);
+            if (this.field) {
+                fields.push(this.field);
+            }
         } else if (this.type === WHERE_TYPE.OR || this.type === WHERE_TYPE.AND) {
             for (const child of this.children) {
                 const childFields = child.getAllFields();
@@ -70,10 +79,24 @@ class WhereBuilder {
         // unique
         return Array.from(new Set(fields));
     }
-}
 
-module.exports = {
-    WhereBuilder,
-    WHERE_TYPE,
-    WHERE_COMPARE,
-};
+    getType(): string {
+        return this.type;
+    }
+
+    getField(): string | null {
+        return this.field;
+    }
+
+    getValue(): any {
+        return this.value;
+    }
+
+    getComparison(): WHERE_COMPARE | null {
+        return this.comparison;
+    }
+
+    getChildren(): WhereBuilder[] {
+        return this.children;
+    }
+}

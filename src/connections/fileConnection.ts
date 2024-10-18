@@ -1,11 +1,13 @@
-const fs = require('fs');
-const path = require("path");
+import fs from 'fs';
+import path from 'path';
+import { Connection } from './connection';
+import { WhereBuilder, WHERE_TYPE, WHERE_COMPARE } from '../whereBuilder';
+import { FIELD_META, FIELD_TYPE, Fields, NestedObject, ORDER, OrderObj } from '../types';
 
-const { Connection, FIELD_META, ORDER, FIELD_TYPE } = require('./connection');
-const { WhereBuilder, WHERE_TYPE, WHERE_COMPARE } = require('../whereBuilder');
+export class FileConnection extends Connection {
+    private cacheDir: string;
 
-class FileConnection extends Connection {
-    constructor(cacheDir, prefix = null) {
+    constructor(cacheDir: string, prefix = null) {
         super(prefix);
 
         this.cacheDir = cacheDir;
@@ -24,13 +26,13 @@ class FileConnection extends Connection {
         this.connection = null;
     }
 
-    _getCacheFilePath(tableName) {
+    _getCacheFilePath(tableName: string) {
         const cacheFilePath = path.join(this.cacheDir, this.getTable(tableName) + ".json");
 
         return cacheFilePath;
     }
 
-    async initializeTable(tableName, fields, version) {
+    async initializeTable(tableName: string, fields: Fields, version: number) {
         await this.getConnection();
 
         const cacheFilePath = this._getCacheFilePath(tableName);
@@ -42,21 +44,21 @@ class FileConnection extends Connection {
         }
     }
 
-    _readCacheFile(tableName) {
+    _readCacheFile(tableName: string) {
         const cacheFilePath = this._getCacheFilePath(tableName);
         
         const data = fs.readFileSync(cacheFilePath, 'utf8');
         return JSON.parse(data);
     }
 
-    _writeCacheFile(tableName, data) {
+    _writeCacheFile(tableName: string, data: NestedObject) {
         const cacheFilePath = this._getCacheFilePath(tableName);
         
         fs.writeFileSync(cacheFilePath, JSON.stringify(data, null, 4));
     }
 
-    _compareValues(value1, value2, negated = false) {
-        const result = (res) => {
+    _compareValues(value1: any, value2: any, negated = false) {
+        const result = (res: boolean) => {
             if (negated) {
                 return !res;
             }
@@ -84,36 +86,40 @@ class FileConnection extends Connection {
         return result(true);
     }
 
-    _doesRowMatchClause(whereClause, obj) {
+    _doesRowMatchClause(whereClause: WhereBuilder | NestedObject, obj: any) {
         if (whereClause instanceof WhereBuilder) {
-            if (whereClause.type === WHERE_TYPE.COMPARE) {
-                const key = whereClause.field;
-                const value = whereClause.value;
-                if (whereClause.comparison === WHERE_COMPARE.EQ) {
+            if (whereClause.getType() === WHERE_TYPE.COMPARE) {
+                const key = whereClause.getField();
+                if (key === null) {
+                    // we can't really compare against a null field
+                    return false;
+                }
+                const value = whereClause.getValue();
+                if (whereClause.getComparison() === WHERE_COMPARE.EQ) {
                     return this._compareValues(value, obj[key]);
-                } else if (whereClause.comparison === WHERE_COMPARE.NE) {
+                } else if (whereClause.getComparison() === WHERE_COMPARE.NE) {
                     return this._compareValues(value, obj[key], true);
-                } else if (whereClause.comparison === WHERE_COMPARE.LT) {
+                } else if (whereClause.getComparison() === WHERE_COMPARE.LT) {
                     return obj[key] < value;
-                } else if (whereClause.comparison === WHERE_COMPARE.LTE) {
+                } else if (whereClause.getComparison() === WHERE_COMPARE.LTE) {
                     return obj[key] <= value;
-                } else if (whereClause.comparison === WHERE_COMPARE.GT) {
+                } else if (whereClause.getComparison() === WHERE_COMPARE.GT) {
                     return obj[key] > value;
-                } else if (whereClause.comparison === WHERE_COMPARE.GTE) {
+                } else if (whereClause.getComparison() === WHERE_COMPARE.GTE) {
                     return obj[key] >= value;
                 } else {
-                    throw new Error(`Unknown WhereBuilder Compare type ${whereClause.comparison}`);
+                    throw new Error(`Unknown WhereBuilder Compare type ${whereClause.getComparison()}`);
                 }
-            } else if (whereClause.type === WHERE_TYPE.OR) {
-                for (const child of whereClause.children) {
+            } else if (whereClause.getType() === WHERE_TYPE.OR) {
+                for (const child of whereClause.getChildren()) {
                     const localResult = this._doesRowMatchClause(child, obj);
                     if (localResult) {
                         // for OR, any success is fine
                         return true;
                     }
                 }
-            } else if (whereClause.type === WHERE_TYPE.AND) {
-                for (const child of whereClause.children) {
+            } else if (whereClause.getType() === WHERE_TYPE.AND) {
+                for (const child of whereClause.getChildren()) {
                     const localResult = this._doesRowMatchClause(child, obj);
                     if (!localResult) {
                         // for AND, any failure fails all
@@ -123,7 +129,7 @@ class FileConnection extends Connection {
 
                 return true;
             } else {
-                throw new Error(`Unknown WhereBuilder type ${whereClause.type}`);
+                throw new Error(`Unknown WhereBuilder type ${whereClause.getType()}`);
             }
         } else {
             let matches = true;
@@ -140,7 +146,7 @@ class FileConnection extends Connection {
         }
     }
 
-    async search(tableName, whereClause, order, limit, offset) {
+    async search(tableName: string, whereClause: WhereBuilder | NestedObject, order?: OrderObj, limit?: number, offset?: number): Promise<any[]> {
         let matching = [];
 
         const startRow = offset || 0;
@@ -186,7 +192,7 @@ class FileConnection extends Connection {
         return matching;
     }
 
-    async update(tableName, id, update, tableFields) {
+    async update(tableName: string, id: number, update: NestedObject, tableFields: Fields): Promise<number> {
         for (const field in update) {
             const fieldData = tableFields[field];
             if (
@@ -194,17 +200,18 @@ class FileConnection extends Connection {
                 fieldData.size &&
                 update[field].length > fieldData.size
             ) {
-                throw new Error(`Field "${field} received data of size ${insertData[field].length}, but expected data of at most length ${fieldData.size}`);
+                throw new Error(`Field "${field} received data of size ${update[field].length}, but expected data of at most length ${fieldData.size}`);
             }
 
-            if (fieldData.foreign) {
-                const allData = await fieldData.foreign.table.search({});
-                const allDataForColumn = allData.map((row) => {
-                    return row[fieldData.foreign.field];
+            const foreign = fieldData.foreign;
+            if (foreign) {
+                const allData = await foreign.table.search({});
+                const allDataForColumn = allData.map((row: any) => {
+                    return row[foreign.field];
                 });
 
-                if (!allDataForColumn.includes(insertData[field])) {
-                    throw new Error(`Failing foreign key constraint on field '${field}: Value '${insertData[field]}' does not exist in foreign table`);
+                if (!allDataForColumn.includes(update[field])) {
+                    throw new Error(`Failing foreign key constraint on field '${field}: Value '${update[field]}' does not exist in foreign table`);
                 }
             }
         }
@@ -221,19 +228,21 @@ class FileConnection extends Connection {
         }
         
         this._writeCacheFile(tableName, data);
+
+        return id;
     }
 
-    async insert(tableName, tableFields, insertData) {
+    async insert(tableName: string, tableFields: Fields, insertData: NestedObject) {
         const data = this._readCacheFile(tableName);
 
-        let newObj = {};
+        let newObj: NestedObject = {};
         let newId = null;
         
         for (const tableField in tableFields) {
             const fieldData = tableFields[tableField];
             // default it all to nulls, the insertData will override
             newObj[tableField] = null;
-            if (fieldData.meta.includes(FIELD_META.AUTO)) {
+            if (fieldData.meta?.includes(FIELD_META.AUTO)) {
                 if (!data.auto[tableField]) {
                     data.auto[tableField] = 1;
                 }
@@ -253,10 +262,11 @@ class FileConnection extends Connection {
                 throw new Error(`Field "${field} received data of size ${insertData[field].length}, but expected data of at most length ${fieldData.size}`);
             }
 
-            if (fieldData.foreign) {
-                const allData = await fieldData.foreign.table.search({});
-                const allDataForColumn = allData.map((row) => {
-                    return row[fieldData.foreign.field];
+            const foreign = fieldData.foreign;
+            if (foreign) {
+                const allData = await foreign.table.search({});
+                const allDataForColumn = allData.map((row: any) => {
+                    return row[foreign.field];
                 });
 
                 if (!allDataForColumn.includes(insertData[field])) {
@@ -277,7 +287,7 @@ class FileConnection extends Connection {
         return newId;
     }
 
-    async delete(tableName, id) {
+    async delete(tableName: string, id: number) {
         const data = this._readCacheFile(tableName);
         const results = [];
         for (let i=0;i<data.data.length;i++) {
@@ -291,7 +301,7 @@ class FileConnection extends Connection {
         this._writeCacheFile(tableName, data);
     }
 
-    async count(tableName, whereClause) {
+    async count(tableName: string, whereClause: WhereBuilder | NestedObject) {
         const rows = await this.search(tableName, whereClause);
         return rows.length;
     }

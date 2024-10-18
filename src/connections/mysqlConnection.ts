@@ -1,14 +1,35 @@
-const { WhereBuilder, WHERE_COMPARE, WHERE_TYPE } = require('../whereBuilder');
-const { Connection, FIELD_TYPE, FIELD_META, ORDER } = require('./connection');
+import { Field, FIELD_META, FIELD_TYPE, FieldWithForeign } from "../types";
+import { WhereBuilder, WHERE_COMPARE, WHERE_TYPE } from "../whereBuilder";
+import { Connection } from './connection';
+
+interface MysqlConnectionObject {
+    host: string;
+    user: string;
+    password: string;
+    database: string;
+}
+
+interface MysqlConnectionUrl {
+    url: string;
+}
+
+interface MysqlError {
+    code: string;
+    message: string;
+}
 
 class MysqlConnection extends Connection {
-    constructor(data, prefix = null) {
+    private initialConnectionData: MysqlConnectionObject | MysqlConnectionUrl;
+    private connectionData: MysqlConnectionObject | null;
+
+    constructor(data: MysqlConnectionObject | MysqlConnectionUrl, prefix = null) {
         super(prefix);
 
-        this.connectionData = data;
+        this.initialConnectionData = data;
+        this.connectionData = null;
     }
 
-    async _query(query, bind) {
+    async _query(query: string, bind: any[]) {
         if (bind) {
             for (const item of bind) {
                 if (item === undefined) {
@@ -26,7 +47,7 @@ class MysqlConnection extends Connection {
         //console.log(query, bind);
 
         return new Promise((resolve, reject) => {
-            const callback = (error, results, fields) => {
+            const callback = (error: string | null, results: any) => {
                 if (error) {
                     reject(error);
                     return;
@@ -42,7 +63,7 @@ class MysqlConnection extends Connection {
         });
     }
 
-    static _getColumnFromType(type, fieldData) {
+    static _getColumnFromType(type: FIELD_TYPE, fieldData: Field) {
         if (type === FIELD_TYPE.INT) {
             return 'INT';
         } else if (type === FIELD_TYPE.STRING) {
@@ -59,7 +80,7 @@ class MysqlConnection extends Connection {
         }
     }
 
-    static _getValueForType(type, value) {
+    static _getValueForType(type: FIELD_TYPE, value: any) {
         if (type === FIELD_TYPE.STRING) {
             return `"${value}"`;
         }
@@ -68,13 +89,13 @@ class MysqlConnection extends Connection {
     }
 
     async createConnection() {
-        if (this.connectionData.url) {
+        if ('url' in this.initialConnectionData) {
             // break the url down into component pieces
 
-            const urlPieces = new URL(this.connectionData.url);
+            const urlPieces = new URL(this.initialConnectionData.url);
 
             let { protocol, host, username, password, pathname } = urlPieces;
-            protocol = protocol.substr(0, protocol.length-1);
+            protocol = protocol.substring(0, protocol.length-1);
 
             const [ realHost, port ] = host.split(":");
 
@@ -88,21 +109,20 @@ class MysqlConnection extends Connection {
                 password,
                 database: pathname.substr(1),
             };
+        } else {
+            this.connectionData = this.initialConnectionData;
         }
-
-        // delete the url from the object to remove nulls
-        delete this.connectionData.url;
 
         // don't attempt to load this until we actually need it
         const mysql = require('mysql2');
         const connection = mysql.createConnection(this.connectionData);
 
-        connection.on('error', (e) => {
+        connection.on('error', (e: MysqlError) => {
             if (e.message.includes('Connection lost') || e.message.includes('The client was disconnected') || e.message.includes('read ECONNRESET')) {
                 this.log('Database server terminated the connection');
                 this.close();
             } else if (e.code === "ER_BAD_DB_ERROR") {
-                this.log(`Database ${this.connectionData.database} does not exist, please create it manually with \n\nCREATE DATABASE ${this.connectionData.database};\n\n`);
+                this.log(`Database ${this.connectionData?.database} does not exist, please create it manually with \n\nCREATE DATABASE ${this.connectionData?.database};\n\n`);
             } else {
                 console.error(e);
             }
@@ -119,7 +139,7 @@ class MysqlConnection extends Connection {
         }
     }
 
-    static _getFieldCreationString(fieldName, data, ticks) {
+    static _getFieldCreationString(fieldName: string, data: Field, ticks: string) {
         let fieldRow = ticks + fieldName + ticks + " " + this._getColumnFromType(data.type, data);
 
         if (data.meta) {
@@ -134,7 +154,7 @@ class MysqlConnection extends Connection {
         return fieldRow;
     }
 
-    _getForeignConstraintString(rowWithForeign) {
+    _getForeignConstraintString(rowWithForeign: FieldWithForeign): string {
         const foreignData = rowWithForeign.foreign;
         const foreignTable = this.getTable(foreignData.table.getTable());
         const sql = `FOREIGN KEY (\`${rowWithForeign.localField}\`) REFERENCES \`${foreignTable}\`(\`${foreignData.field}\`)`;
