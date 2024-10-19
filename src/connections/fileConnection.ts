@@ -301,7 +301,7 @@ export default class FileConnection extends Connection {
         this._writeCacheFile(tableName, data);
     }
 
-    async count(tableName: string, whereClause: WhereBuilder | NestedObject) {
+    async count(tableName: string, whereClause: WhereBuilder | NestedObject): Promise<number> {
         const rows = await this.search(tableName, whereClause);
         return rows.length;
     }
