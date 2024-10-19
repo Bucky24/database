@@ -2,8 +2,8 @@ import { object, string, number, lazy, mixed, array } from "yup";
 
 import { getDefaultConnection } from './connections';
 import { WhereBuilder } from "./whereBuilder";
-import { Field, FIELD_META, FIELD_TYPE, Fields } from "./types";
-import type { Express, Request, RequestParamHandler, Response } from 'express';
+import { Field, FIELD_META, FIELD_TYPE, Fields, NestedObject } from "./types";
+import type { Express, NextFunction, Request, RequestParamHandler, Response } from 'express';
 
 const modelSchema = object({
     table: string().required(),
@@ -38,13 +38,13 @@ interface FieldWithId extends Field {
     id: string;
 };
 
-type Middleware = RequestParamHandler;
+type Middleware = (req: Request, res: Response, next: NextFunction) => void;
 
 interface RouteOptions {
     middleware?: Middleware | Middleware[];
 }
 
-class Model {
+export default class Model {
     private table: string;
     private fields: Fields;
     private fieldList: FieldWithId[];
@@ -112,7 +112,7 @@ class Model {
 
             return true;
         }
-        app.get('/' + this.table, ...middleware, async (req, res) => {
+        app.get('/' + this.table, ...middleware, async (req: Request, res: Response) => {
             try {
                 const objects = await this.search({});
                 const filteredObjects = this.filterForExport(objects);
@@ -192,7 +192,7 @@ class Model {
         });
     }
 
-    static _getColumnFromType(type) {
+    static _getColumnFromType(type: FIELD_TYPE) {
         if (type === FIELD_TYPE.INT) {
             return 'INT';
         } else if (type === FIELD_TYPE.STRING) {
@@ -206,7 +206,7 @@ class Model {
         }
     }
 
-    static _getValueForType(type, value) {
+    static _getValueForType(type: FIELD_TYPE, value: any) {
         if (type === FIELD_TYPE.STRING) {
             return `"${value}"`;
         }
@@ -214,7 +214,7 @@ class Model {
         return value;
     }
 
-    _getFieldsWithMeta(meta) {
+    _getFieldsWithMeta(meta: FIELD_META) {
         return this.fieldList.filter((field) => {
             if (!field.meta) {
                 // if it has no meta, no way it can match any meta
@@ -224,7 +224,7 @@ class Model {
         });
     }
 
-    static _getFieldCreationString(fieldName, data, ticks) {
+    static _getFieldCreationString(fieldName: string, data: NestedObject, ticks: string) {
         let fieldRow = ticks + fieldName + ticks + " " + Model._getColumnFromType(data.type);
 
         if (data.meta) {
@@ -249,7 +249,7 @@ class Model {
         return connection.initializeTable(this.table, this.fields, this.version);
     }
     
-    getFieldData(field) {
+    getFieldData(field: string) {
         if (!this.fields[field]) {
             return null;
         }
@@ -264,7 +264,7 @@ class Model {
         return this.table;
     }
 
-    processResult(result) {
+    processResult(result: any) {
         Object.keys(result).forEach((key) => {
             const value = result[key];
             const data = this.getFieldData(key);
@@ -284,16 +284,16 @@ class Model {
         return result;
     }
 
-    processForSave(value, field) {
+    processForSave(value: any, field: string) {
         const data = this.getFieldData(field);
-        if (data.type === FIELD_TYPE.JSON) {
+        if (data?.type === FIELD_TYPE.JSON) {
             return JSON.stringify(value);
         }
 
         return value;
     }
     
-    async get(id) {
+    async get(id: number | string) {
         const connection = getDefaultConnection();
         
         if (connection === null) {
@@ -361,7 +361,7 @@ class Model {
         return result;
     }
     
-    async update(id, fields) {
+    async update(id: number | string, fields: NestedObject) {
         const connection = getDefaultConnection();
         
         if (connection === null) {
@@ -384,15 +384,16 @@ class Model {
         }
 
         const tableFields = Object.keys(this.fields);
-        return await connection.update(this.table, id, fields, tableFields.reduce((obj, field) => {
+        const handledFields = tableFields.reduce((obj, field: string) => {
             return {
                 ...obj,
                 [field]: this.getFieldData(field),
             };
-        }));
+        }, {});
+        return await connection.update(this.table, id, fields, handledFields);
     }
     
-    async insert(insertData) {
+    async insert(insertData: NestedObject): Promise<number> {
         const connection = getDefaultConnection();
         
         if (connection === null) {
@@ -418,6 +419,9 @@ class Model {
         for (let i=0;i<tableFields.length;i++) {
             const key = tableFields[i];
             const fieldData = this.getFieldData(key);
+            if (!fieldData) {
+                throw new Error(`Field '${key}' not found in model`);
+            }
             if (fieldData.meta.includes(FIELD_META.REQUIRED) && (insertData[key] === null || insertData[key] === undefined)) {
                 throw new Error(`Required field '${key}' not found`);
             }
@@ -431,7 +435,7 @@ class Model {
         }, {}), insertData);
     }
 
-    async delete(id) {
+    async delete(id: number | string) {
         const connection = getDefaultConnection();
         
         if (connection === null) {
@@ -441,7 +445,7 @@ class Model {
         return connection.delete(this.table, id);
     }
 
-    filterForExport(data) {
+    filterForExport(data: any): any {
         if (Array.isArray(data)) {
             return data.map((item) => {
                 return this.filterForExport(item);
@@ -462,10 +466,3 @@ class Model {
         return result;
     }
 }
-
-module.exports = {
-    Model,
-    FIELD_TYPE,
-    FIELD_META,
-    ORDER,
-};
