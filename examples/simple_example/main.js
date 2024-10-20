@@ -1,19 +1,23 @@
 const path = require('path');
-const { Model, FIELD_META, FIELD_TYPE, Connection } = require('../../index.js');
+const { Model, FIELD_META, FIELD_TYPE, Connection } = require('../../build/index.js');
 
 (async () => {
     const cacheDir = path.join(__dirname, 'cache');
     const connection = await Connection.fileConnection(cacheDir);
     Connection.setDefaultConnection(connection);
 
-    const model = new Model("example_table", {
-        "field1": {
-            type: FIELD_TYPE.STRING,
+    const model = Model.create({
+        table: "example_table",
+        fields: {
+            "field1": {
+                type: FIELD_TYPE.STRING,
+            },
+            "field2": {
+                type: FIELD_TYPE.STRING,
+                meta: [FIELD_META.REQUIRED],
+            },
         },
-        "field2": {
-            type: FIELD_TYPE.STRING,
-            meta: [FIELD_META.REQUIRED],
-        },
+        version: 1,
     });
 
     await model.init();

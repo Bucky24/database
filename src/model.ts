@@ -44,13 +44,13 @@ interface RouteOptions {
     middleware?: Middleware | Middleware[];
 }
 
-export default class Model {
+export class Model {
     private table: string;
     private fields: Fields;
     private fieldList: FieldWithId[];
     private version: number;
 
-    constructor(settings: ModelSettings) {
+    private constructor(settings: ModelSettings) {
         this.table = settings.table;
         this.fields = settings.fields;
         this.fieldList = [];

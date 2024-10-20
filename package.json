@@ -5,7 +5,7 @@
     "main": "build/index.js",
     "scripts": {
         "test": "mocha --exit",
-        "build": "tsc"
+        "build": "tsc &&  rm -rf ./build/test"
     },
     "repository": {
         "type": "git",

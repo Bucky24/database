@@ -13,7 +13,7 @@ import {
 } from '../src/connections';
 import MysqlConnection from '../src/connections/mysqlConnection';
 import PostgresConnection from '../src/connections/postgresConnection';
-import Model from '../src/model';
+import { Model } from '../src/model';
 import { FIELD_TYPE } from '../src/types';
 import { WHERE_COMPARE, WhereBuilder } from '../src/whereBuilder';
 import mysqlAuth from './db_mysql.json';

@@ -7,7 +7,7 @@ import request from 'supertest';
 import { Connection, fileConnection, getDefaultConnection, mysqlConnection, postgresConnection, setDefaultConnection, setLog } from '../src/connections';
 import MysqlConnection from '../src/connections/mysqlConnection';
 import PostgresConnection from '../src/connections/postgresConnection';
-import Model from '../src/model';
+import { Model } from '../src/model';
 import mysqlAuth from './db_mysql.json';
 import postgresAuth from './db_postgres.json';
 import { FIELD_META, FIELD_TYPE, ORDER } from '../src/types';
