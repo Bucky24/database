@@ -27,7 +27,7 @@ export default class PostgresConnection extends Connection {
     }
 
     async createConnection() {
-        const { Client } = await import('pg');
+        const { default: { Client }} = await import('pg');
         let client;
 
         if ("url" in this.connectionData) {

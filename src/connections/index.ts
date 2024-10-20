@@ -7,7 +7,7 @@ import { ClientConfig } from 'pg';
 
 let defaultConnection: Connection.Connection | null = null;
 
-export function setDefaultConnection(connection: Connection.Connection) {
+export function setDefaultConnection(connection: Connection.Connection | null) {
     defaultConnection = connection;
 }
 

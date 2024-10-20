@@ -4,3 +4,4 @@ examples/*/cache
 test/db.json
 test/db_mysql.json
 test/db_postgres.json
+build

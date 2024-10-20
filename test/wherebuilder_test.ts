@@ -1,40 +1,40 @@
-const assert = require('assert');
-const path = require('path');
-const fs = require('fs');
-const express = require('express');
-const request = require('supertest');
+import assert from 'assert';
+import path from 'path';
+import fs from 'fs';
 
-const { Model, FIELD_META, FIELD_TYPE, ORDER } = require('../src/model');
-const { WhereBuilder, WHERE_COMPARE } = require("../src/whereBuilder");
-const Connection = require('../src/connections');
-const mysqlAuth = require('./db_mysql.json');
-const postgresAuth = require('./db_postgres.json');
+import { 
+    Connection,
+    fileConnection,
+    getDefaultConnection,
+    mysqlConnection,
+    postgresConnection,
+    setDefaultConnection,
+    setLog,
+} from '../src/connections';
+import MysqlConnection from '../src/connections/mysqlConnection';
+import PostgresConnection from '../src/connections/postgresConnection';
+import Model from '../src/model';
+import { FIELD_TYPE } from '../src/types';
+import { WHERE_COMPARE, WhereBuilder } from '../src/whereBuilder';
+import mysqlAuth from './db_mysql.json';
+import postgresAuth from './db_postgres.json';
 
 const cachePath = path.join(__dirname, 'cache_dir');
 
-const assertThrows = async (fn, message) => {
-    let error = null;
-    try {
-        await fn();
-    } catch (e) {
-        error = e;
-    }
-    
-    assert(error !== null);
-    if (message) {
-        assert.strictEqual(error.message, message);
-    }
+interface ConnectionData {
+    setup: () => Promise<Connection>,
+    teardown: () => Promise<void>,
 }
 
 describe('WhereBuilder', async () => {  
-    Connection.setLog(false);
+    setLog(false);
 
-    const connections = {
+    const connections: { [key: string]: ConnectionData}  = {
         'file': {
             setup: () => {
-                return Connection.fileConnection(cachePath);
+                return fileConnection(cachePath);
             },
-            teardown: () => {
+            teardown: async () => {
                 if (fs.existsSync(cachePath)) {
                     fs.rmSync(cachePath, { recursive: true });
                 }
@@ -42,15 +42,15 @@ describe('WhereBuilder', async () => {
         },
         'mysql': {
             setup: () => {
-                return Connection.mysqlConnection({
+                return mysqlConnection({
                     host: mysqlAuth.host,
-                    username: mysqlAuth.username,
+                    user: mysqlAuth.username,
                     password: mysqlAuth.password,
                     database: mysqlAuth.database,
                 });
             },
             teardown: async() => {
-                const connection = Connection.getDefaultConnection();
+                const connection = getDefaultConnection() as MysqlConnection;
                 if (connection) {
                     try {
                         await connection._query("SET FOREIGN_KEY_CHECKS = 0;");
@@ -72,16 +72,16 @@ describe('WhereBuilder', async () => {
         },
         'postgres': {
             setup: () => {
-                return Connection.postgresConnection({
+                return postgresConnection({
                     host: postgresAuth.host,
-                    username: postgresAuth.username,
+                    user: postgresAuth.username,
                     password: postgresAuth.password,
                     database: postgresAuth.database,
                     port: postgresAuth.port,
                 });
             },
             teardown: async() => {
-                const connection = Connection.getDefaultConnection();
+                const connection = getDefaultConnection() as PostgresConnection;
                 if (connection) {
                     try {
                         // try to drop all tables
@@ -123,11 +123,11 @@ describe('WhereBuilder', async () => {
     for (const connectionType in connections) {
         const connectionActions = connections[connectionType];
         describe(connectionType, async () => {
-            let model;
+            let model: Model;
 
             beforeEach(async () => {
                 const connection = await connectionActions.setup();
-                Connection.setDefaultConnection(connection);
+                setDefaultConnection(connection);
 
                 model = Model.create({
                     table: "table", 
@@ -149,7 +149,7 @@ describe('WhereBuilder', async () => {
 
             afterEach(async () => {
                 await connectionActions.teardown();
-                Connection.setDefaultConnection(null);
+                setDefaultConnection(null);
             });
 
             it('should handle eq', async () => {
@@ -207,7 +207,7 @@ describe('WhereBuilder', async () => {
 
             it('should handle an AND clause', async () => {
                 const rows = await model.search(WhereBuilder.new()
-                    .and((builder) => {
+                    .and((builder: WhereBuilder) => {
                         builder.compare("bar", WHERE_COMPARE.LT, 15)
                         .compare("bar", WHERE_COMPARE.GT, 5);
                     })

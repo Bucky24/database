@@ -13,6 +13,8 @@ export enum WHERE_COMPARE {
     GTE='where/gte',
 };
 
+type BuilderFunction = (builder: WhereBuilder) => void;
+
 export class WhereBuilder {
     private type: WHERE_TYPE;
     private children: WhereBuilder[];
@@ -30,18 +32,18 @@ export class WhereBuilder {
         this.negated = false;
     }
 
-    static new() {
+    static new(): WhereBuilder {
         return new WhereBuilder();
     }
 
-    and(cb: Function) {
+    and(cb: BuilderFunction) {
         const child = new WhereBuilder(WHERE_TYPE.AND);
         cb(child);
         this.children.push(child);
         return this;
     }
 
-    or(cb: Function) {
+    or(cb: BuilderFunction) {
         const child = new WhereBuilder(WHERE_TYPE.OR);
         cb(child);
         this.children.push(child);

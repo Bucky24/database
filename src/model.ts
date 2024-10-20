@@ -67,7 +67,17 @@ export default class Model {
     static create(settings: ModelSettings) {
         try {
             const { table, fields, version } = modelSchema.validateSync(settings);
-            const model = new Model({ table, fields, version });
+            const model = new Model({
+                table,
+                fields: {
+                    id: {
+                        type: FIELD_TYPE.INT,
+                        meta: [FIELD_META.AUTO],
+                    },
+                    ...fields,
+                },
+                version,
+            });
 
             return model;
         } catch (error: any) {
