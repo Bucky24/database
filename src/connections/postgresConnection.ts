@@ -1,10 +1,17 @@
-import { ClientConfig } from 'pg';
 import { WhereBuilder, WHERE_COMPARE, WHERE_TYPE } from '../whereBuilder';
 import { Connection } from './connection';
 import { Field, FIELD_META, FIELD_TYPE, Fields, FieldWithForeign, NestedObject, ORDER, OrderObj } from '../types';
 
 export interface PostgresConnectionUrl {
     url: string;
+}
+
+export interface PostgresConnectionObject {
+    host: string,
+    username: string,
+    password: string,
+    database: string,
+    port: number,
 }
 
 export interface PostgresWhere {
@@ -18,9 +25,9 @@ export interface PostgresResult {
 }
 
 export default class PostgresConnection extends Connection {
-    private connectionData: ClientConfig | PostgresConnectionUrl;
+    private connectionData: PostgresConnectionObject | PostgresConnectionUrl;
 
-    constructor(data: ClientConfig | PostgresConnectionUrl, prefix = null) {
+    constructor(data: PostgresConnectionObject | PostgresConnectionUrl, prefix = null) {
         super(prefix);
 
         this.connectionData = data;
@@ -33,7 +40,13 @@ export default class PostgresConnection extends Connection {
         if ("url" in this.connectionData) {
             client = new Client({ connectionString: this.connectionData.url });
         } else {
-            client = new Client(this.connectionData);
+            client = new Client({
+                host: this.connectionData.host,
+                port: this.connectionData.port,
+                user: this.connectionData.username,
+                password: this.connectionData.password,
+                database: this.connectionData.database,
+            });
         }
 
         return new Promise((resolve, reject) => {

@@ -1,41 +1,49 @@
-const assert = require('assert');
-const path = require('path');
-const fs = require('fs');
-const express = require('express');
-const request = require('supertest');
+import assert from 'assert';
+import path from 'path';
+import fs from 'fs';
+import express, { Express } from 'express';
+import request from 'supertest';
 
-const { Model, FIELD_META, FIELD_TYPE, ORDER } = require('../src/model');
-const { WhereBuilder, WHERE_COMPARE } = require("../src/whereBuilder");
-const Connection = require('../src/connections');
-const mysqlAuth = require('./db_mysql.json');
-const postgresAuth = require('./db_postgres.json');
+import { Connection, fileConnection, getDefaultConnection, mysqlConnection, postgresConnection, setDefaultConnection, setLog } from '../src/connections';
+import MysqlConnection from '../src/connections/mysqlConnection';
+import PostgresConnection from '../src/connections/postgresConnection';
+import Model from '../src/model';
+import mysqlAuth from './db_mysql.json';
+import postgresAuth from './db_postgres.json';
+import { FIELD_META, FIELD_TYPE, ORDER } from '../src/types';
+import { WHERE_COMPARE, WhereBuilder } from '../src/whereBuilder';
 
 const cachePath = path.join(__dirname, 'cache_dir');
 
-const assertThrows = async (fn, message) => {
-    let error = null;
+const assertThrows = async (fn: Function, message?: string) => {
+    let error: Error | null = null;
     try {
         await fn();
-    } catch (e) {
+    } catch (e: any) {
         error = e;
     }
     
     assert(error !== null);
-    if (message) {
+    if (message && error) {
         assert.strictEqual(error.message, message);
     }
 }
 
+interface ConnectionData {
+    setup: () => Promise<Connection>,
+    teardown: () => Promise<void>,
+}
+
 describe('model', async () => {  
     const filePath = path.join(cachePath, "table.json");
-    Connection.setLog(false);
+    setLog(false);
 
-    const connections = {
+    const connections: { [key: string]: ConnectionData } = {
         'file': {
             setup: () => {
-                return Connection.fileConnection(cachePath);
+                return fileConnection(cachePath);
             },
-            teardown: () => {
+            teardown: async () => {
                 if (fs.existsSync(cachePath)) {
                     fs.rmSync(cachePath, { recursive: true });
                 }
@@ -43,7 +51,7 @@ describe('model', async () => {
         },
         'mysql': {
             setup: () => {
-                return Connection.mysqlConnection({
+                return mysqlConnection({
                     host: mysqlAuth.host,
                     username: mysqlAuth.username,
                     password: mysqlAuth.password,
@@ -51,7 +59,7 @@ describe('model', async () => {
                 });
             },
             teardown: async() => {
-                const connection = Connection.getDefaultConnection();
+                const connection = getDefaultConnection() as MysqlConnection;
                 if (connection) {
                     try {
                         await connection._query("SET FOREIGN_KEY_CHECKS = 0;");
@@ -73,7 +81,7 @@ describe('model', async () => {
         },
         'postgres': {
             setup: () => {
-                return Connection.postgresConnection({
+                return postgresConnection({
                     host: postgresAuth.host,
                     username: postgresAuth.username,
                     password: postgresAuth.password,
@@ -82,7 +90,7 @@ describe('model', async () => {
                 });
             },
             teardown: async() => {
-                const connection = Connection.getDefaultConnection();
+                const connection = getDefaultConnection() as PostgresConnection;
                 if (connection) {
                     try {
                         // try to drop all tables
@@ -127,17 +135,17 @@ describe('model', async () => {
 
             beforeEach(async () => {
                 const connection = await connectionActions.setup();
-                Connection.setDefaultConnection(connection);
+                setDefaultConnection(connection);
             });
 
             afterEach(async () => {
                 await connectionActions.teardown();
-                Connection.setDefaultConnection(null);
+                setDefaultConnection(null);
             });
 
             describe('setup', () => {
                 it('should error when no default connection set', async () => {
-                    Connection.setDefaultConnection(null);
+                    setDefaultConnection(null);
                     await assertThrows(async () => {
                         const model = Model.create({
                             table: 'table',
@@ -767,7 +775,7 @@ describe('model', async () => {
             });
             
             describe('update', () => {
-                let model;
+                let model: Model;
 
                 beforeEach(async () => {
                     model = Model.create({
@@ -888,9 +896,9 @@ describe('model', async () => {
             });
             
             describe('delete', () => {
-                let model;
-                let id1;
-                let id2;
+                let model: Model;
+                let id1: number;
+                let id2: number;
 
                 beforeEach(async () => {
                     model = Model.create({
@@ -1089,7 +1097,7 @@ describe('model', async () => {
             });
 
             describe('createCrudApis', async () => {
-                let server = null;
+                let server: Express = express();
                 let model;
                 let middlewareCalled = false;
 
@@ -1202,15 +1210,15 @@ describe('model', async () => {
 
     describe('file specific', async () => {
         beforeEach(async () => {
-            const connection = await Connection.fileConnection(cachePath);
-            Connection.setDefaultConnection(connection);
+            const connection = await fileConnection(cachePath);
+            setDefaultConnection(connection);
         });
 
         afterEach(() => {
             if (fs.existsSync(cachePath)) {
                 fs.rmSync(cachePath, { recursive: true });
             }
-            Connection.setDefaultConnection(null);
+            setDefaultConnection(null);
         });
 
         describe('cache', () => {

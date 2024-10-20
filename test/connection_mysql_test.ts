@@ -4,16 +4,17 @@
  * This test WILL truncate the entire database once it's done
  */
 
- const assert = require('assert');
+ import assert from 'assert';
  
- const Connection = require('../src/connections');
- const dbAuth = require('./db_mysql.json');
+ import { mysqlConnection} from '../src/connections';
+ import dbAuth from './db_mysql.json';
+import MysqlConnection from '../src/connections/mysqlConnection';
 
- function run(connection, query) {
+ function run(connection: MysqlConnection, query: string) {
     return connection._query(query);
  }
 
- function sleep(ms) {
+ function sleep(ms: number) {
     return new Promise ((resolve) => {
         setTimeout(resolve, ms);
     });
@@ -21,7 +22,7 @@
  
  describe('connection->MySQL', () => {
     it('should connect with a URL', async () => {
-        const connection = await Connection.mysqlConnection({ url: dbAuth.url });
+        const connection = await mysqlConnection({ url: dbAuth.url });
 
         // we need to wait for the connection to fully resolve itself before closing it
         // or else we get an error and a test failure
@@ -35,15 +36,15 @@
     it('should reconnect after timeout', async function() {
         // we are waiting 3 seconds for timeout, make sure test does not timeout
         this.timeout(5000);
-        const connection = await Connection.mysqlConnection({ url: dbAuth.url });
+        const connection = await mysqlConnection({ url: dbAuth.url });
         await connection.init();
 
-        query = "set session wait_timeout = 2";
+        const query = "set session wait_timeout = 2";
         await run(connection, query);
 
         await sleep(3000);
 
-        assert.equal(connection.connection, null);
+        assert.equal(await connection.getConnection(false), null);
 
         // should recreate the connection
         const dbConnection = connection.getConnection();

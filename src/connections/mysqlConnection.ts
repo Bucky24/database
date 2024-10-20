@@ -4,7 +4,7 @@ import { Connection } from './connection';
 
 export interface MysqlConnectionObject {
     host: string;
-    user: string;
+    username: string;
     password: string;
     database: string;
 }
@@ -110,7 +110,7 @@ export default class MysqlConnection extends Connection {
 
             this.connectionData = {
                 host: realHost,
-                user: username,
+                username,
                 password,
                 database: pathname.substr(1),
             };
@@ -120,7 +120,12 @@ export default class MysqlConnection extends Connection {
 
         // don't attempt to load this until we actually need it
         const mysql = await import('mysql2');
-        const connection = mysql.createConnection(this.connectionData);
+        const connection = mysql.createConnection({
+            host: this.connectionData?.host,
+            user: this.connectionData?.username,
+            password: this.connectionData?.password,
+            database: this.connectionData?.database,
+        });
 
         connection.on('error', (e: MysqlError) => {
             if (e.message.includes('Connection lost') || e.message.includes('The client was disconnected') || e.message.includes('read ECONNRESET')) {

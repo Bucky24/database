@@ -44,7 +44,7 @@ describe('WhereBuilder', async () => {
             setup: () => {
                 return mysqlConnection({
                     host: mysqlAuth.host,
-                    user: mysqlAuth.username,
+                    username: mysqlAuth.username,
                     password: mysqlAuth.password,
                     database: mysqlAuth.database,
                 });
@@ -74,7 +74,7 @@ describe('WhereBuilder', async () => {
             setup: () => {
                 return postgresConnection({
                     host: postgresAuth.host,
-                    user: postgresAuth.username,
+                    username: postgresAuth.username,
                     password: postgresAuth.password,
                     database: postgresAuth.database,
                     port: postgresAuth.port,

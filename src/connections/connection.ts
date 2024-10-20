@@ -23,9 +23,10 @@ export class Connection {
     createConnection() {
         throw new Error("Connection must override createConnection");
     }
+
     
-    async getConnection() {
-        if (!this.connection) {
+    async getConnection(reconnect: boolean = true) {
+        if (!this.connection && reconnect) {
             this.log('connecting again');
             this.connection = await this.createConnection();
         }

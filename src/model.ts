@@ -2,8 +2,8 @@ import { object, string, number, lazy, mixed, array } from "yup";
 
 import { getDefaultConnection } from './connections';
 import { WhereBuilder } from "./whereBuilder";
-import { Field, FIELD_META, FIELD_TYPE, Fields, NestedObject } from "./types";
-import type { Express, NextFunction, Request, RequestParamHandler, Response } from 'express';
+import { Field, FIELD_META, FIELD_TYPE, Fields, NestedObject, OrderObj } from "./types";
+import type { Express, NextFunction, Request, Response } from 'express';
 
 const modelSchema = object({
     table: string().required(),
@@ -321,7 +321,7 @@ export default class Model {
         return result[0];
     }
     
-    async search(queryData = {}, order = null, limit = null, offset = null) {
+    async search(queryData: WhereBuilder | NestedObject = {}, order?: OrderObj | null, limit?: number, offset?: number) {
         const connection = getDefaultConnection();
         
         if (connection === null) {

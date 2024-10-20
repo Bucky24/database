@@ -1,9 +1,8 @@
 import FileConnection from './fileConnection';
-import PostgresConnection, { PostgresConnectionUrl } from "./postgresConnection";
+import PostgresConnection, { PostgresConnectionObject, PostgresConnectionUrl } from "./postgresConnection";
 import * as Connection from './connection';
 export * from './connection';
 import MysqlConnection, { MysqlConnectionObject, MysqlConnectionUrl } from './mysqlConnection';
-import { ClientConfig } from 'pg';
 
 let defaultConnection: Connection.Connection | null = null;
 
@@ -27,7 +26,7 @@ export async function mysqlConnection(data: MysqlConnectionObject | MysqlConnect
     return connection;
 }
 
-export async function postgresConnection(data: ClientConfig | PostgresConnectionUrl) {
+export async function postgresConnection(data: PostgresConnectionObject | PostgresConnectionUrl) {
     const connection = new PostgresConnection(data);
     await connection.init();
     return connection;

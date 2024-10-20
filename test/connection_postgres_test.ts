@@ -4,12 +4,12 @@
  * This test WILL truncate the entire database once it's done
  */
 
- const Connection = require('../src/connections');
- const dbAuth = require('./db_postgres.json');
+ import { postgresConnection } from "../src/connections";
+ import dbAuth from './db_postgres.json';
 
  describe('connection->PostGres', () => {
     it('should connect with a URL', async () => {
-        const connection = await Connection.postgresConnection({ url: dbAuth.url });
+        const connection = await postgresConnection({ url: dbAuth.url });
         await connection.close();
     });
 });
