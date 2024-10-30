@@ -329,7 +329,9 @@ export class Model {
         }
 
         let keys = [];
-        if (queryData instanceof WhereBuilder) {
+        // for some weird reason when we convert to JS, the instanceof is no longer working,
+        // so fall back to checking the constructor name
+        if (queryData instanceof WhereBuilder || queryData.constructor.name === "WhereBuilder") {
             keys = queryData.getAllFields();
         } else {
             keys = Object.keys(queryData);

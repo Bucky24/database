@@ -87,7 +87,9 @@ export default class FileConnection extends Connection {
     }
 
     _doesRowMatchClause(whereClause: WhereBuilder | NestedObject, obj: any) {
-        if (whereClause instanceof WhereBuilder) {
+        // for some weird reason when we convert to JS, the instanceof is no longer working,
+        // so fall back to checking the constructor name
+        if (whereClause instanceof WhereBuilder || whereClause.constructor.name === "WhereBuilder") {
             if (whereClause.getType() === WHERE_TYPE.COMPARE) {
                 const key = whereClause.getField();
                 if (key === null) {

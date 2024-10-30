@@ -209,7 +209,9 @@ export default class MysqlConnection extends Connection {
     }
 
     static _generateWhere(whereClause: WhereBuilder | NestedObject): MysqlWhereData {
-        if (whereClause instanceof WhereBuilder) {
+        // for some weird reason when we convert to JS, the instanceof is no longer working,
+        // so fall back to checking the constructor name
+        if (whereClause instanceof WhereBuilder || whereClause.constructor.name === "WhereBuilder") {
             if (whereClause.getType() === WHERE_TYPE.COMPARE) {
                 if (whereClause.getComparison() === WHERE_COMPARE.EQ) {
                     return MysqlConnection._getEquality(whereClause.getField(), whereClause.getValue());
