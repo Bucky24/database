@@ -4,10 +4,10 @@
  * This test WILL truncate the entire database once it's done
  */
 
- import assert from 'assert';
+import assert from 'assert';
  
- import { mysqlConnection} from '../src/connections';
- import dbAuth from './db_mysql.json';
+import { mysqlConnection} from '../src/connections';
+import dbAuth from './db_mysql.json';
 import MysqlConnection from '../src/connections/mysqlConnection';
 
  function run(connection: MysqlConnection, query: string) {
