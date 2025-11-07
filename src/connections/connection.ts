@@ -1,4 +1,4 @@
-import { Fields, NestedObject, OrderObj } from "../types";
+import { Fields, NestedObject, OrderObj, IndexSettings } from "../types";
 import { WhereBuilder } from "../whereBuilder";
 
 let allowLog = true;
@@ -51,7 +51,7 @@ export class Connection {
         throw new Error("Connection must override close");
     }
 
-    async initializeTable(tableName: string, fields: Fields, version: number) {
+    async initializeTable(tableName: string, fields: Fields, version: number, indexes: IndexSettings[] = []) {
         throw new Error("Connection must override initalizeTable");
     }
 

@@ -1,6 +1,6 @@
 import { WhereBuilder, WHERE_COMPARE, WHERE_TYPE } from '../whereBuilder';
 import { Connection } from './connection';
-import { Field, FIELD_META, FIELD_TYPE, Fields, FieldWithForeign, NestedObject, ORDER, OrderObj } from '../types';
+import { Field, FIELD_META, FIELD_TYPE, Fields, FieldWithForeign, NestedObject, ORDER, OrderObj, IndexSettings } from '../types';
 
 export interface PostgresConnectionUrl {
     url: string;
@@ -272,7 +272,7 @@ export default class PostgresConnection extends Connection {
         }
     }
 
-    async initializeTable(tableName: string, fields: Fields, version: number) {
+    async initializeTable(tableName: string, fields: Fields, version: number, indexes: IndexSettings[] = []) {
         // first see if our versions table exists
         const getVersionsQuery = "SELECT * FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename = '" + this.getTable('table_versions') + "' LIMIT 1;"
 
@@ -380,6 +380,22 @@ export default class PostgresConnection extends Connection {
                     [version, this.getTable(tableName)],
                 );
                 console.log("Version mismatch resolved.");
+            }
+        }
+        // create indexes
+        for (const index of indexes) {
+            const autoName = index.fields.join("_");
+            const indexName = `${tableName}_${index.name || autoName}_idx`;
+            const checkIndexQuery = `SELECT to_regclass($1) as index_name`;
+
+            const indexResult = await this._query(checkIndexQuery, [`public.${indexName}`]);
+
+            if (!indexResult.rows[0].index_name) {
+                const fieldsList = index.fields.map(f => `"${f}"`).join(", ");
+                const uniqueStr = index.unique ? "UNIQUE" : "";
+                const createIndexQuery = `CREATE ${uniqueStr} INDEX "${indexName}" ON public."${this.getTable(tableName)}" (${fieldsList})`;
+                this.log(`Creating ${uniqueStr ? 'unique ' : ''}index ${indexName} on table ${tableName}`);
+                await this._query(createIndexQuery);
             }
         }
     }

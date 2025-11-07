@@ -1,4 +1,4 @@
-import { Field, FIELD_META, FIELD_TYPE, Fields, FieldWithForeign, NestedObject, ORDER, OrderObj } from "../types";
+import { Field, FIELD_META, FIELD_TYPE, Fields, FieldWithForeign, NestedObject, ORDER, OrderObj, IndexSettings } from "../types";
 import { WhereBuilder, WHERE_COMPARE, WHERE_TYPE } from "../whereBuilder";
 import { Connection } from './connection';
 
@@ -286,7 +286,7 @@ export default class MysqlConnection extends Connection {
         }
     }
 
-    async initializeTable(tableName: string, fields: Fields, version: number) {
+    async initializeTable(tableName: string, fields: Fields, version: number, indexes: IndexSettings[] = []) {
         if (!this.connectionData) {
             throw new Error('No connection');
         }
@@ -394,6 +394,22 @@ export default class MysqlConnection extends Connection {
                 this.log("Version mismatch resolved.");
             }
         }
+        // create indexes
+        for (const index of indexes) {
+            // auto-generate a name if not provided
+            const autoName = index.fields.join("_");
+            const indexName = `${tableName}_${index.name || autoName}_idx`;
+            const checkIndexQuery = `SHOW INDEX FROM \`${this.getTable(tableName)}\` WHERE Key_name = ?`;
+            const indexResult = await this._query(checkIndexQuery, [indexName]);
+            if (indexResult.length === 0) {
+                this.log(`Creating index ${indexName} on table ${tableName}`);
+                const uniqueStr = index.unique ? 'UNIQUE' : '';
+                const fieldsStr = index.fields.map((field) => `\`${field}\``).join(', ');
+                const createIndexQuery = `CREATE ${uniqueStr} INDEX \`${indexName}\` ON \`${this.getTable(tableName)}\` (${fieldsStr})`;
+                await this._query(createIndexQuery);
+            }
+        }
+        
     }
 
     async insert(tableName: string, fieldData: Fields, insertData: NestedObject) {
