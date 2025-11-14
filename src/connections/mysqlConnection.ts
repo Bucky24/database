@@ -398,7 +398,15 @@ export default class MysqlConnection extends Connection {
         for (const index of indexes) {
             // auto-generate a name if not provided
             const autoName = index.fields.join("_");
-            const indexName = `${tableName}_${index.name || autoName}_idx`;
+            let indexName;
+
+            if (index.name) {
+                // Use the provided name as-is
+                indexName = index.name;
+            } else {
+                // Auto-generate a consistent name
+                indexName = `${tableName}_${autoName}_idx`;
+            }
             const checkIndexQuery = `SHOW INDEX FROM \`${this.getTable(tableName)}\` WHERE Key_name = ?`;
             const indexResult = await this._query(checkIndexQuery, [indexName]);
             if (indexResult.length === 0) {
