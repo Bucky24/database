@@ -410,8 +410,9 @@ export default class MysqlConnection extends Connection {
             const checkIndexQuery = `SHOW INDEX FROM \`${this.getTable(tableName)}\` WHERE Key_name = ?`;
             const indexResult = await this._query(checkIndexQuery, [indexName]);
             if (indexResult.length === 0) {
-                this.log(`Creating index ${indexName} on table ${tableName}`);
                 const uniqueStr = index.unique ? 'UNIQUE' : '';
+                this.log(`Creating ${uniqueStr ? 'unique ' : ''}index ${indexName} on table ${tableName}`);
+                
                 const fieldsStr = index.fields.map((field) => `\`${field}\``).join(', ');
                 const createIndexQuery = `CREATE ${uniqueStr} INDEX \`${indexName}\` ON \`${this.getTable(tableName)}\` (${fieldsStr})`;
                 await this._query(createIndexQuery);
