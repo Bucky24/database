@@ -2,7 +2,7 @@ import { object, string, number, lazy, mixed, array } from "yup";
 
 import { getDefaultConnection } from './connections';
 import { WhereBuilder } from "./whereBuilder";
-import { Field, FIELD_META, FIELD_TYPE, Fields, NestedObject, OrderObj } from "./types";
+import { Field, FIELD_META, FIELD_TYPE, Fields, NestedObject, OrderObj, IndexSettings } from "./types";
 import type { Express, NextFunction, Request, Response } from 'express';
 
 const modelSchema = object({
@@ -26,12 +26,19 @@ const modelSchema = object({
         });
     }),
     version: number().required().integer(),
+    indexes: array().of(object({
+        name: string(),
+        fields: array().of(string().required()).min(1),
+        unique: mixed().oneOf([true, false]).default(false),
+    })).optional(),
 });
+
 
 interface ModelSettings {
     table: string;
     fields: Fields;
     version: number;
+    indexes?: IndexSettings[];
 }
 
 interface FieldWithId extends Field {
@@ -49,6 +56,7 @@ export class Model {
     private fields: Fields;
     private fieldList: FieldWithId[];
     private version: number;
+    private indexes: IndexSettings[];
 
     private constructor(settings: ModelSettings) {
         this.table = settings.table;
@@ -62,6 +70,7 @@ export class Model {
             });
         });
         this.version = settings.version;
+        this.indexes = settings.indexes || [];
     }
 
     static create(settings: ModelSettings) {
@@ -77,6 +86,7 @@ export class Model {
                     ...fields,
                 },
                 version,
+                indexes: settings.indexes,
             });
 
             return model;
@@ -255,8 +265,18 @@ export class Model {
         if (connection === null) {
             throw new Error('No default connection set');
         }
-
-        return connection.initializeTable(this.table, this.fields, this.version);
+        //validate indexes
+        const tableIndexes: IndexSettings[] = [];
+        for (const index of this.indexes) {
+            // ensure all fields exist
+            for (const field of index.fields) {
+                if (!this.getFieldData(field)) {
+                    throw new Error(`Cannot create index '${index.name}': field '${field}' does not exist in model '${this.table}'`);
+                }
+            }
+            tableIndexes.push(index);
+        }
+        return connection.initializeTable(this.table, this.fields, this.version, tableIndexes);
     }
     
     getFieldData(field: string) {

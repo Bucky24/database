@@ -67,3 +67,9 @@ export interface NestedObject {
 export interface OrderObj {
     [key: string]: ORDER;
 }
+
+export interface IndexSettings {
+    name?: string;
+    fields: string[];
+    unique?: boolean;
+}
