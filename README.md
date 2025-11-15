@@ -122,6 +122,7 @@ Allows creating a new Model for use in your program. It's recommended that you c
 | table | String | Name of the table to manipulate |
 | fields | Object | Keys being the name of the field, and values being a Field object |
 | version | Integer | Version of the table structure. Unused currently, though it is stored in a versions table in the database |
+| indexes | Object[] | An array of IndexSettings objects
 
 Note that the Model will automatically add an "id" field with type of FIELD_TYPE.INT that is a required auto-increment field. You can override this field if you desire.
 
@@ -186,6 +187,21 @@ The values of FIELD_META are:
 | AUTO | Indicates this field is an auto-increment field. There should only be one of these. |
 | REQUIRED | Indicates the given field is required (inserts that do not contain this field will fail and updates that set it to null will fail) |
 | FILTERED | Indicates the given field shouldn't be exposed to clients and should be filtered out upon request. |
+
+#### INDEXES
+Optional. A model can be given indexes on one or more fields for query efficiency customization.  
+
+*NOTE*: Indexes will NOT work with a file connection.  They can only be used with a MySQL or a postgres connection
+
+When creating a model, the indexes property is an array of IndexSettings objects.  
+The properties of those IndexSettings objects are:
+
+| Name | Type   | Description |
+|------|--------|-------------|
+| name | String | Optional. If not provided, the index will be given an auto-generated name that includes the table name, followed by the field name, and ending with "idx" (all separated by underscores). |  
+| fields | Array of Strings | An array of strings representing the name of the field(s) that the index will use.  The strings must match corresponding field names exactly or an error will be thrown when initializing the model | 
+| unique | Boolean | Optional. Defaults to false. Determines if the field or combination of fields being used by the index will enforce uniqueness
+
 
 #### ORDER
 
@@ -401,7 +417,7 @@ WhereBuilder.new()
 
 This method allows adding an `AND` check into the builder.
 
-*Note* A `WhereBuilder` acts as an `and` type by default, to allow multiple comparisons (and to mimic hte default of passing a normal object into `search`)
+*Note* A `WhereBuilder` acts as an `and` type by default, to allow multiple comparisons (and to mimic the default of passing a normal object into `search`)
 
 | Param | Type | Description |
 | -- | -- |
