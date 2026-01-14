@@ -1232,5 +1232,33 @@ describe('model', async () => {
                 assert(fs.existsSync(filePath));
             });
         });
+
+        it('should handle nulls in strings that are optional but have a length', async () => {
+            const model = Model.create({
+                table: "table",
+                fields: {
+                    field1: {
+                        type: FIELD_TYPE.STRING,
+                        size: 100,
+                    },
+                },
+                version: 1,
+            });
+
+            await model.init();
+
+            await model.insert({
+                field1: null,
+            });
+
+            let data = await model.search({});
+            assert.deepStrictEqual(data[0], { id: 1, field1: null });
+
+            await model.update(1, { field1: 'foo'});
+            await model.update(1, { field1: null});
+
+            data = await model.search({});
+            assert.deepStrictEqual(data[0], { id: 1, field1: null });
+        });
     });
 });

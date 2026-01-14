@@ -200,6 +200,7 @@ export default class FileConnection extends Connection {
             if (
                 fieldData.type === FIELD_TYPE.STRING &&
                 fieldData.size &&
+                update[field] !== null &&
                 update[field].length > fieldData.size
             ) {
                 throw new Error(`Field "${field} received data of size ${update[field].length}, but expected data of at most length ${fieldData.size}`);
@@ -259,6 +260,7 @@ export default class FileConnection extends Connection {
             if (
                 fieldData.type === FIELD_TYPE.STRING &&
                 fieldData.size &&
+                insertData[field] !== null &&
                 insertData[field].length > fieldData.size
             ) {
                 throw new Error(`Field "${field} received data of size ${insertData[field].length}, but expected data of at most length ${fieldData.size}`);
