@@ -9,7 +9,7 @@ There are two steps to using the module. The first is to setup a connection, and
 
 ## Connection
 
-Supports JSON file, MySQL, and Postgres connections. While you can create a Connection directly, it's recommended to call one of the helper methods.
+Supports JSON file, MySQL, Postgres, and in memory connections. While you can create a Connection directly, it's recommended to call one of the helper methods.
 
 ### Connection.fileConnection
 
@@ -23,6 +23,18 @@ Example:
 
 ```
 const connection = await Connection.fileConnection(path.join(__dirname, "cache"));
+```
+
+### Connection.memoryConnection
+
+Creates a connection that writes to in-memory. This is useful when running tests or other situations where you don't need the database to persist.
+
+ALL DATA IS LOST WHEN YOUR APPLICATION EXITS
+
+Example:
+
+```
+const connection = await Connection.memoryConnection();
 ```
 
 ### Connection.mysqlConnection

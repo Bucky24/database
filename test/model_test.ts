@@ -4,7 +4,7 @@ import fs from 'fs';
 import express, { Express } from 'express';
 import request from 'supertest';
 
-import { Connection, fileConnection, getDefaultConnection, mysqlConnection, postgresConnection, setDefaultConnection, setLog } from '../src/connections';
+import { Connection, fileConnection, getDefaultConnection, mysqlConnection, postgresConnection, setDefaultConnection, setLog, memoryConnection } from '../src/connections';
 import MysqlConnection from '../src/connections/mysqlConnection';
 import PostgresConnection from '../src/connections/postgresConnection';
 import { Model } from '../src/model';
@@ -39,6 +39,14 @@ describe('model', async () => {
     setLog(false);
 
     const connections: { [key: string]: ConnectionData } = {
+        'memory': {
+            setup: () => {
+                return memoryConnection();
+            },
+            teardown: async () => {
+
+            },
+        },
         'file': {
             setup: () => {
                 return fileConnection(cachePath);
