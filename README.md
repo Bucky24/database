@@ -3,6 +3,10 @@ A simple model system for node that allows connecting to multiple types of data 
 
 If you've found this, there are probably better modules for this with lots of fancy bells and whistles. I built this because I was bored but not bored enough to actually look up and learn any of those other modules.
 
+# Frontend
+
+This module can be used in the browser. Only the `MemoryConnection` is available. To use, import from `@bucky24/database/client`. All other functions should work as expected.
+
 # Usage
 
 There are two steps to using the module. The first is to setup a connection, and the second is to create models to actually manipulate the data. You can do these in the same file or different ones. See the examples for examples.

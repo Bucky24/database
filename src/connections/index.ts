@@ -3,7 +3,6 @@ import PostgresConnection, { PostgresConnectionObject, PostgresConnectionUrl } f
 import * as Connection from './connection';
 export * from './connection';
 import MysqlConnection, { MysqlConnectionObject, MysqlConnectionUrl } from './mysqlConnection';
-import MmeoryConnection from './memoryConnection';
 import MemoryConnection from './memoryConnection';
 
 let defaultConnection: Connection.Connection | null = null;

@@ -1,8 +1,11 @@
 {
     "name": "@bucky24/database",
-    "version": "3.10.0",
+    "version": "3.11.0",
     "description": "A simple model system for node that allows connecting to multiple types of data source",
-    "main": "build/index.js",
+      "exports": {
+        ".": "./build/index.js",
+        "./client": "./build/client.js"
+    },
     "scripts": {
         "test": "mocha --exit",
         "build": "rm -rf ./build && tsc &&  rm -rf ./build/test",
