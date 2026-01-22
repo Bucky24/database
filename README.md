@@ -11,7 +11,11 @@ NOTE: You may see a warning
 
 ```The current file is a CommonJS module whose imports will produce 'require' calls; however, the referenced file is an ECMAScript module and cannot be imported with 'require'.```
 
-In your model files. This does not affect the build and is just an IDE issue.
+In your model files. To fix this, you can use
+
+```// @ts-expect-error - ESM/CJS interop false positive```
+
+These will affect your TS build but do not prevent either server or client from operating as expected.
 
 # Usage
 
