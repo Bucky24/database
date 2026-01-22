@@ -1,16 +1,6 @@
-import * as Connection from './connection';
 export * from './connection';
+export * from './default';
 import MemoryConnection from './memoryConnection';
-
-let defaultConnection: Connection.Connection | null = null;
-
-export function setDefaultConnection(connection: Connection.Connection | null) {
-    defaultConnection = connection;
-}
-
-export function getDefaultConnection() {
-    return defaultConnection;
-}
 
 export async function memoryConnection() {
     const connection = new MemoryConnection();

@@ -41,7 +41,6 @@ describe('Client tests', async () => {
     for (const connectionType in connections) {
         const connectionActions = connections[connectionType];
         describe(connectionType, async () => {
-
             beforeEach(async () => {
                 const connection = await connectionActions.setup();
                 Connection.setDefaultConnection(connection);
