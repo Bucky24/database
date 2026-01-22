@@ -4,7 +4,7 @@
  * This test WILL truncate the entire database once it's done
  */
 
- import { postgresConnection } from "../src/connections";
+ import { postgresConnection } from "../src/connections/server";
  import dbAuth from './db_postgres.json';
 
  describe('connection->PostGres', () => {

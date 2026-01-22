@@ -5,7 +5,13 @@ If you've found this, there are probably better modules for this with lots of fa
 
 # Frontend
 
-This module can be used in the browser. Only the `MemoryConnection` is available. To use, import from `@bucky24/database/client`. All other functions should work as expected.
+This module can be used in the browser. Only the `MemoryConnection` is available. To use, import from `@bucky24/database/client`. All other functions should work as expected. Note that if you have any models you are sharing between server and client, they _must_ import from `@bucky24/database/client` otherwise you'll have build problems with your client.
+
+NOTE: You may see a warning 
+
+```The current file is a CommonJS module whose imports will produce 'require' calls; however, the referenced file is an ECMAScript module and cannot be imported with 'require'.```
+
+In your model files. This does not affect the build and is just an IDE issue.
 
 # Usage
 

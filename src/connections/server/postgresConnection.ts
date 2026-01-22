@@ -1,6 +1,6 @@
-import { WhereBuilder, WHERE_COMPARE, WHERE_TYPE } from '../whereBuilder';
-import { Connection } from './connection';
-import { Field, FIELD_META, FIELD_TYPE, Fields, FieldWithForeign, NestedObject, ORDER, OrderObj, IndexSettings } from '../types';
+import { WhereBuilder, WHERE_COMPARE, WHERE_TYPE } from '../../whereBuilder';
+import { Connection } from '../common/connection';
+import { Field, FIELD_META, FIELD_TYPE, Fields, FieldWithForeign, NestedObject, ORDER, OrderObj, IndexSettings } from '../../types';
 
 export interface PostgresConnectionUrl {
     url: string;
@@ -511,5 +511,3 @@ export default class PostgresConnection extends Connection {
         await this._query(query, [id]);
     }
 }
-
-module.exports = PostgresConnection;

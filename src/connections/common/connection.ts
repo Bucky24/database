@@ -1,5 +1,5 @@
-import { Fields, NestedObject, OrderObj, IndexSettings } from "../types";
-import { WhereBuilder } from "../whereBuilder";
+import { Fields, NestedObject, OrderObj, IndexSettings } from "../../types";
+import { WhereBuilder } from "../../whereBuilder";
 
 let allowLog = true;
 

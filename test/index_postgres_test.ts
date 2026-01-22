@@ -7,9 +7,9 @@
 import assert from 'assert';
 import { Model } from '../src/model';
 import { FIELD_TYPE } from '../src/types';
-import { postgresConnection, setDefaultConnection, getDefaultConnection } from '../src/connections';
+import { postgresConnection, setDefaultConnection, getDefaultConnection } from '../src/connections/server';
 import dbAuth from './db_postgres.json';
-import PostgresConnection from '../src/connections/postgresConnection';
+import PostgresConnection from '../src/connections/server/postgresConnection';
 
 const assertThrows = async (fn: Function, message?: string) => {
     let error: Error | null = null;
@@ -31,7 +31,7 @@ const setup = () => {
         username: dbAuth.username,
         password: dbAuth.password,
         database: dbAuth.database,
-        port: dbAuth.port,
+        port: parseInt(dbAuth.port),
     });
 }
 

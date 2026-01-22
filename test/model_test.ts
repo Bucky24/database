@@ -1,18 +1,20 @@
 import assert from 'assert';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 import express, { Express } from 'express';
 import request from 'supertest';
 
-import { Connection, fileConnection, getDefaultConnection, mysqlConnection, postgresConnection, setDefaultConnection, setLog, memoryConnection } from '../src/connections';
-import MysqlConnection from '../src/connections/mysqlConnection';
-import PostgresConnection from '../src/connections/postgresConnection';
+import { Connection, fileConnection, getDefaultConnection, mysqlConnection, postgresConnection, setDefaultConnection, setLog, memoryConnection } from '../src/connections/server';
+import MysqlConnection from '../src/connections/server/mysqlConnection';
+import PostgresConnection from '../src/connections/server/postgresConnection';
 import { Model } from '../src/model';
 import mysqlAuth from './db_mysql.json';
 import postgresAuth from './db_postgres.json';
 import { FIELD_META, FIELD_TYPE, ORDER } from '../src/types';
 import { WHERE_COMPARE, WhereBuilder } from '../src/whereBuilder';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const cachePath = path.join(__dirname, 'cache_dir');
 
 const assertThrows = async (fn: Function, message?: string) => {
@@ -94,7 +96,7 @@ describe('model', async () => {
                     username: postgresAuth.username,
                     password: postgresAuth.password,
                     database: postgresAuth.database,
-                    port: postgresAuth.port,
+                    port: parseInt(postgresAuth.port),
                 });
             },
             teardown: async() => {

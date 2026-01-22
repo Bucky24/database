@@ -1,24 +1,27 @@
 import assert from 'assert';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 
-import { 
+import {
     Connection,
     fileConnection,
     getDefaultConnection,
+    memoryConnection,
     mysqlConnection,
     postgresConnection,
     setDefaultConnection,
     setLog,
-} from '../src/connections';
-import MysqlConnection from '../src/connections/mysqlConnection';
-import PostgresConnection from '../src/connections/postgresConnection';
+} from '../src/connections/server';
+import MysqlConnection from '../src/connections/server/mysqlConnection';
+import PostgresConnection from '../src/connections/server/postgresConnection';
 import { Model } from '../src/model';
 import { FIELD_TYPE } from '../src/types';
 import { WHERE_COMPARE, WhereBuilder } from '../src/whereBuilder';
 import mysqlAuth from './db_mysql.json';
 import postgresAuth from './db_postgres.json';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const cachePath = path.join(__dirname, 'cache_dir');
 
 interface ConnectionData {
@@ -30,6 +33,14 @@ describe('WhereBuilder', async () => {
     setLog(false);
 
     const connections: { [key: string]: ConnectionData}  = {
+        'memory': {
+            setup: () => {
+                return memoryConnection();
+            },
+            teardown: async () => {
+
+            },
+        },
         'file': {
             setup: () => {
                 return fileConnection(cachePath);
@@ -77,7 +88,7 @@ describe('WhereBuilder', async () => {
                     username: postgresAuth.username,
                     password: postgresAuth.password,
                     database: postgresAuth.database,
-                    port: postgresAuth.port,
+                    port: parseInt(postgresAuth.port),
                 });
             },
             teardown: async() => {

@@ -1,6 +1,6 @@
 import { object, string, number, lazy, mixed, array } from "yup";
 
-import { getDefaultConnection } from './connections/default';
+import { getDefaultConnection } from './connections/common/default';
 import { WhereBuilder } from "./whereBuilder";
 import { Field, FIELD_META, FIELD_TYPE, Fields, NestedObject, OrderObj, IndexSettings } from "./types";
 import type { Express, NextFunction, Request, Response } from 'express';

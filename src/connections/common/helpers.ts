@@ -1,5 +1,5 @@
-import { NestedObject } from "../types";
-import { WHERE_COMPARE, WHERE_TYPE, WhereBuilder } from "../whereBuilder";
+import { NestedObject } from "../../types";
+import { WHERE_COMPARE, WHERE_TYPE, WhereBuilder } from "../../whereBuilder";
 
 export function compareValues(value1: any, value2: any, negated = false) {
     const result = (res: boolean) => {

@@ -6,9 +6,9 @@
 
 import assert from 'assert';
  
-import { mysqlConnection} from '../src/connections';
+import { mysqlConnection} from '../src/connections/server';
 import dbAuth from './db_mysql.json';
-import MysqlConnection from '../src/connections/mysqlConnection';
+import MysqlConnection from '../src/connections/server/mysqlConnection';
 
  function run(connection: MysqlConnection, query: string) {
     return connection._query(query);

@@ -1,9 +1,9 @@
 import fs from 'fs';
 import path from 'path';
-import { Connection } from './connection';
-import { WhereBuilder, WHERE_TYPE, WHERE_COMPARE } from '../whereBuilder';
-import { FIELD_META, FIELD_TYPE, Fields, NestedObject, ORDER, OrderObj } from '../types';
-import { doesRowMatchClause } from './helpers';
+import { Connection } from '../common/connection';
+import { WhereBuilder, WHERE_TYPE, WHERE_COMPARE } from '../../whereBuilder';
+import { FIELD_META, FIELD_TYPE, Fields, NestedObject, ORDER, OrderObj } from '../../types';
+import { doesRowMatchClause } from '../common/helpers';
 
 export default class FileConnection extends Connection {
     private cacheDir: string;
@@ -220,5 +220,3 @@ export default class FileConnection extends Connection {
         return rows.length;
     }
 }
-
-module.exports = FileConnection;

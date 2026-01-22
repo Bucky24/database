@@ -1,9 +1,9 @@
 import FileConnection from './fileConnection';
 import PostgresConnection, { PostgresConnectionObject, PostgresConnectionUrl } from "./postgresConnection";
-export * from './connection';
-export * from './default';
+export * from '../common/connection';
+export * from '../common/default';
 import MysqlConnection, { MysqlConnectionObject, MysqlConnectionUrl } from './mysqlConnection';
-import MemoryConnection from './memoryConnection';
+import MemoryConnection from '../common/memoryConnection';
 
 export async function fileConnection(cacheDir: string) {
     const connection = new FileConnection(cacheDir);

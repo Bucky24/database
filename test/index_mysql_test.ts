@@ -7,9 +7,9 @@
 import assert from 'assert';
 import { Model } from '../src/model';
 import { FIELD_TYPE } from '../src/types';
-import { mysqlConnection, setDefaultConnection, getDefaultConnection } from '../src/connections';
+import { mysqlConnection, setDefaultConnection, getDefaultConnection } from '../src/connections/server';
 import dbAuth from './db_mysql.json';
-import MysqlConnection from '../src/connections/mysqlConnection';
+import MysqlConnection from '../src/connections/server/mysqlConnection';
 
 
 const assertThrows = async (fn: Function, message?: string) => {

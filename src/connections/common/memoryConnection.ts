@@ -1,5 +1,5 @@
-import { FIELD_META, FIELD_TYPE, Fields, IndexSettings, NestedObject, ORDER, OrderObj } from '../types';
-import { WhereBuilder } from '../whereBuilder';
+import { FIELD_META, FIELD_TYPE, Fields, IndexSettings, NestedObject, ORDER, OrderObj } from '../../types';
+import { WhereBuilder } from '../../whereBuilder';
 import { Connection } from './connection';
 import { doesRowMatchClause } from './helpers';
 

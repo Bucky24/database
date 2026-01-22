@@ -1,4 +1,4 @@
-export * as Connection from './src/connections';
+export * as Connection from './src/connections/server';
 export * from './src/model';
 export * from './src/whereBuilder';
 export * from './src/types';
