@@ -454,7 +454,7 @@ export default class PostgresConnection extends Connection {
                     directionStr = 'DESC';
                 }
                 // would love to parameterize this but it crashes if I do
-                orderList.push(`${field} ${directionStr}`);
+                orderList.push(`"${field}" ${directionStr}`);
                 //values.push(field);
             }
             query += " ORDER BY " + orderList.join(", ");

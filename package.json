@@ -1,6 +1,6 @@
 {
     "name": "@bucky24/database",
-    "version": "3.12.1",
+    "version": "3.12.2",
     "description": "A simple model system for node that allows connecting to multiple types of data source",
     "exports": {
         ".": {
