@@ -4,6 +4,7 @@ import { Field, FIELD_META, FIELD_TYPE, Fields, FieldWithForeign, NestedObject, 
 
 export interface PostgresConnectionUrl {
     url: string;
+    ssl?: boolean;
 }
 
 export interface PostgresConnectionObject {
@@ -38,7 +39,12 @@ export default class PostgresConnection extends Connection {
         let client;
 
         if ("url" in this.connectionData) {
-            client = new Client({ connectionString: this.connectionData.url });
+            const data = this.connectionData as PostgresConnectionUrl;
+            const config = {
+                connectionString: data.url,
+                ssl: data.ssl ? {rejectUnauthorized: false} : undefined,
+            }
+            client = new Client(config);
         } else {
             client = new Client({
                 host: this.connectionData.host,
