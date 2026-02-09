@@ -150,28 +150,28 @@ export default class PostgresConnection extends Connection {
             }
 
             return {
-                where: `${key} ${negated ? 'not in' : 'in'} (${questionList.join(', ')})`,
+                where: `"${key}" ${negated ? 'not in' : 'in'} (${questionList.join(', ')})`,
                 values,
             };
         } else if (value === null) {
             return {
-                where: `${key} ${negated ? 'is not': 'is'} null`,
+                where: `"${key}" ${negated ? 'is not': 'is'} null`,
                 values: [],
             };
         } else if (value === false) {
             if (negated) {
                 return {
-                    where: `(${key} != false and ${key} is not null)`,
+                    where: `("${key}" != false and "${key}" is not null)`,
                     values: [],
                 };
             }
             return {
-                where: `(${key} = false or ${key} is null)`,
+                where: `("${key}" = false or "${key}" is null)`,
                 values: [],
             };
         } else {
             return {
-                where: `${key} ${negated ? '!=' : '='} $${questionCount + 1}`,
+                where: `"${key}" ${negated ? '!=' : '='} $${questionCount + 1}`,
                 values: [value],
             };
         }

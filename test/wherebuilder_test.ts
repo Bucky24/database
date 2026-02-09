@@ -255,6 +255,23 @@ describe('WhereBuilder', async () => {
                 assert.equal(rows.length, 1);
                 assert.equal(rows[0]['bar'], 10);
             });
+
+            it('should handle a camelCase key', async () => {
+                const model2 = Model.create({
+                    table: "table2", 
+                    fields: {
+                        fooBar: {
+                            type: FIELD_TYPE.INT,
+                        },
+                    },
+                    version: 1,
+                });
+                await model2.init();
+                await model2.insert({ fooBar: 5 });
+                const rows = await model2.search(WhereBuilder.new().compare('fooBar', WHERE_COMPARE.EQ, 5));
+                assert.equal(rows.length, 1);
+                assert.equal(rows[0]['fooBar'], 5);
+            });
         });
     }
 });
