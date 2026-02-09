@@ -118,7 +118,7 @@ export default class PostgresConnection extends Connection {
                 if (error.message.startsWith("syntax error")) {
                     reject(new Error("Syntax error for query " + query + ": " + error.message));
                 } else {
-                    reject(error);
+                    reject(`Error for query ${query}: ${error}`);
                 }
             }
         });
@@ -307,9 +307,9 @@ export default class PostgresConnection extends Connection {
 
                 const auto = data.meta && data.meta.includes(FIELD_META.AUTO)
 
-                let fieldRow = "" + fieldName + " ";
+                let fieldRow = `"${fieldName}"`;
                 if (!auto) {
-                    fieldRow += PostgresConnection._getColumnFromType(data.type, data);
+                    fieldRow += " " + PostgresConnection._getColumnFromType(data.type, data);
                 }
 
                 if (data.meta) {
@@ -423,7 +423,7 @@ export default class PostgresConnection extends Connection {
 
         Object.keys(insertData).forEach((key, index) => {
             const value = insertData[key];
-            fieldList.push(key);
+            fieldList.push(`"${key}"`);
             valueList.push(value);
             valueKeys.push("$" + (index + 1));
         });
@@ -500,7 +500,7 @@ export default class PostgresConnection extends Connection {
         const values = [];
         let counter = 1;
         Object.keys(update).forEach((key) => {
-            fieldRows.push(`${key} = $${counter}`);
+            fieldRows.push(`"${key}" = $${counter}`);
             counter ++;
             values.push(update[key]);
         });
