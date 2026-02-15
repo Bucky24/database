@@ -17,12 +17,18 @@ export default class MemoryConnection extends Connection {
     private static memoryData: MemoryData = {};
     createConnection() {}
 
-    async initializeTable(tableName: string, fields: Fields, version: number, indexes: IndexSettings[] = []) {
-        MemoryConnection.memoryData[tableName] = {
-            fields,
-            rows: [],
-            auto: {},
-        };
+    async initializeTable(tableName: string, fields: Fields, indexes: IndexSettings[] = []) {
+        if (!MemoryConnection.memoryData[tableName]) {
+            MemoryConnection.memoryData[tableName] = {
+                fields,
+                rows: [],
+                auto: {},
+            };
+        }
+    }
+
+    async reset() {
+        MemoryConnection.memoryData = {};
     }
 
     async insert(tableName: string, tableFields: Fields, insertData: NestedObject): Promise<number> {

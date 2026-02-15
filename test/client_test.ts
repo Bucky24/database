@@ -58,7 +58,6 @@ describe('Client tests', async () => {
                         const model = Model.create({
                             table: 'table',
                             fields: {},
-                            version: 1,
                         });
                         await model.init();
                     }, "No default connection set");
@@ -72,7 +71,6 @@ describe('Client tests', async () => {
                                 type: FIELD_TYPE.STRING,
                             },
                         },
-                        version: 1,
                     });
                     await model.init();
                     await model.insert({

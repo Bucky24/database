@@ -25,7 +25,6 @@ const modelSchema = object({
             }, {}),
         });
     }),
-    version: number().required().integer(),
     indexes: array().of(object({
         name: string(),
         fields: array().of(string().required()).min(1),
@@ -37,7 +36,6 @@ const modelSchema = object({
 interface ModelSettings {
     table: string;
     fields: Fields;
-    version: number;
     indexes?: IndexSettings[];
 }
 
@@ -55,7 +53,6 @@ export class Model {
     private table: string;
     private fields: Fields;
     private fieldList: FieldWithId[];
-    private version: number;
     private indexes: IndexSettings[];
 
     private constructor(settings: ModelSettings) {
@@ -69,13 +66,12 @@ export class Model {
                 id: key,
             });
         });
-        this.version = settings.version;
         this.indexes = settings.indexes || [];
     }
 
     static create(settings: ModelSettings) {
         try {
-            const { table, fields, version } = modelSchema.validateSync(settings);
+            const { table, fields } = modelSchema.validateSync(settings);
             const model = new Model({
                 table,
                 fields: {
@@ -85,7 +81,6 @@ export class Model {
                     },
                     ...fields,
                 },
-                version,
                 indexes: settings.indexes,
             });
 
@@ -276,7 +271,7 @@ export class Model {
             }
             tableIndexes.push(index);
         }
-        return connection.initializeTable(this.table, this.fields, this.version, tableIndexes);
+        return connection.initializeTable(this.table, this.fields, tableIndexes);
     }
     
     getFieldData(field: string) {

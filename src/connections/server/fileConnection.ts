@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { Connection } from '../common/connection';
-import { WhereBuilder, WHERE_TYPE, WHERE_COMPARE } from '../../whereBuilder';
-import { FIELD_META, FIELD_TYPE, Fields, NestedObject, ORDER, OrderObj } from '../../types';
+import { WhereBuilder } from '../../whereBuilder';
+import { FIELD_META, FIELD_TYPE, Fields, IndexSettings, NestedObject, ORDER, OrderObj } from '../../types';
 import { doesRowMatchClause } from '../common/helpers';
 
 export default class FileConnection extends Connection {
@@ -33,7 +33,7 @@ export default class FileConnection extends Connection {
         return cacheFilePath;
     }
 
-    async initializeTable(tableName: string, fields: Fields, version: number) {
+    async initializeTable(tableName: string, fields: Fields, indexes: IndexSettings[] = []) {
         await this.getConnection();
 
         const cacheFilePath = this._getCacheFilePath(tableName);

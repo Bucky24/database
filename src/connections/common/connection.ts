@@ -51,7 +51,7 @@ export class Connection {
         throw new Error("Connection must override close");
     }
 
-    async initializeTable(tableName: string, fields: Fields, version: number, indexes: IndexSettings[] = []) {
+    async initializeTable(tableName: string, fields: Fields, indexes: IndexSettings[] = []) {
         throw new Error("Connection must override initalizeTable");
     }
 

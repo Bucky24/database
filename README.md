@@ -147,7 +147,6 @@ Allows creating a new Model for use in your program. It's recommended that you c
 |---|---|---|
 | table | String | Name of the table to manipulate |
 | fields | Object | Keys being the name of the field, and values being a Field object |
-| version | Integer | Version of the table structure. Unused currently, though it is stored in a versions table in the database |
 | indexes | Object[] | An array of IndexSettings objects
 
 Note that the Model will automatically add an "id" field with type of FIELD_TYPE.INT that is a required auto-increment field. You can override this field if you desire.
@@ -179,7 +178,6 @@ const tableModel = Model.create({
             size: <optional number, only used for the STRING type>
         },
     },
-    version: 1,
 });
 ```
 
@@ -355,7 +353,6 @@ const userModel = Model.create({
             meta: [FIELD_META.REQUIRED],
         },
     },
-    version: 1,
 });
 const userObject = {
     password: 'a_password_hash',
@@ -369,7 +366,7 @@ console.log(filteredUserObject);
 
 ### Table Changes
 
-If you need to add new fields to a Model, add them to the list then bump the version number. The system will automatically add the new columns the next time `init` is called.
+If you need to add new fields to a Model, all you have to do is add them to the list. The system will automatically add the new columns the next time `init` is called.
 
 ### CRUD Methods
 
@@ -470,3 +467,40 @@ WhereBuilder.new()
         builder.compare("field", WHERE_COMPARE.EQ, 5)
             .compare("field2", WHERE_COMPARE.NE, 10)
     });
+
+## MigrationHandler
+
+The `MigrationHandler` provides a way to run one-off data migrations on your database.
+
+The expected flow when using this system is as follows:
+* Setup and register default connection
+* Create and intialize database tables
+* Register migrations
+* Run migrations
+
+### registerMigration
+
+This method takes in a migration name and a callback that will be called when the migration is run. Migrations only run once, and use the name as a unique key.
+
+| Param | Description |
+| -- | -- |
+| name | The name of the migration. Should be unique. |
+| cb | The callback to run when the migration is executed. Will be called only once. |
+
+Example:
+
+```
+MigrationHandler.registerMigration("update_user_data", async () => {
+    await userModel.update(USER_ID, {
+        date_joined: Date.now(),
+    });
+});
+```
+
+### runMigrations
+
+This method instructs the `MigrationHandler` to run any migrations that have not already run on the database.
+
+NOTE: This method expects that a default connection is set, and that all tables are already initialized.
+
+This method takes in no parameters, but does return a `Promise` that you should await before continuing with server startup.

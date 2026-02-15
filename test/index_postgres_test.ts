@@ -95,7 +95,6 @@ describe('index->Postgres', () => {
             indexes: [
                 { fields: ['username'] },
             ],
-            version: 1,
         });
         await model.init();
         const id = await model.insert({ username: 'mike', email: 'mike@test.com' });
@@ -116,7 +115,6 @@ describe('index->Postgres', () => {
             indexes: [
                 { fields: ['first_name', 'last_name'] },
             ],
-            version: 1,
         });
 
         await model.init();
@@ -162,7 +160,6 @@ describe('index->Postgres', () => {
             indexes: [
                 { fields: ['email'], unique: true },
             ],
-            version: 1,
         });
 
         await model.init();
@@ -184,7 +181,6 @@ describe('index->Postgres', () => {
             indexes: [
                 { fields: ['username'], unique: true },
             ],
-            version: 1,
         });
 
         await model.init();
@@ -206,7 +202,6 @@ describe('index->Postgres', () => {
             indexes: [
                 { fields: ['first_name', 'last_name'], unique: true },
             ],
-            version: 1,
         });
 
         await model.init();
@@ -226,7 +221,6 @@ describe('index->Postgres', () => {
             fields: {
                 name: { type: FIELD_TYPE.STRING, size: 100 },
             },
-            version: 1,
         });
 
         await modelV1.init();
@@ -240,7 +234,6 @@ describe('index->Postgres', () => {
             indexes: [
                 { fields: ['name'] },
             ],
-            version: 2,
         });
 
         await modelV2.init();
@@ -259,7 +252,6 @@ describe('index->Postgres', () => {
                 username: { type: FIELD_TYPE.STRING, size: 100 },
             },
             indexes: [{ fields: ['username'] }],
-            version: 1,
         });
 
         await model.init();
@@ -301,7 +293,6 @@ describe('index->Postgres', () => {
             indexes: [
                 { fields: ['non_existent_field'], name: 'invalid_index_table_non_existent_field_idx ' },
             ],
-            version: 1,
         });
 
         await assertThrows(async () => {
@@ -318,7 +309,6 @@ describe('index->Postgres', () => {
             indexes: [
                 { fields: ['email'] },
             ],
-            version: 1,
         });
 
         await model.init();
@@ -355,7 +345,6 @@ describe('index->Postgres', () => {
             indexes: [
                 { fields: ['email'], name: 'my_custom_email_index' },
             ],
-            version: 1,
         });
 
         await model.init();

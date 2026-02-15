@@ -278,25 +278,12 @@ export default class PostgresConnection extends Connection {
         }
     }
 
-    async initializeTable(tableName: string, fields: Fields, version: number, indexes: IndexSettings[] = []) {
+    async initializeTable(tableName: string, fields: Fields, indexes: IndexSettings[] = []) {
         // first see if our versions table exists
-        const getVersionsQuery = "SELECT * FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename = '" + this.getTable('table_versions') + "' LIMIT 1;"
+        const getTableQuery = "SELECT * FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename = '" + this.getTable(tableName) + "' LIMIT 1;"
 
-        const tableResult = await this._query(getVersionsQuery);
+        const tableResult = await this._query(getTableQuery);
         let rows = tableResult.rows;
-
-        if (rows.length === 0) {
-            console.log("Versions table not found, creating!");
-
-            const creationQuery = "CREATE TABLE " + this.getTable('table_versions') + " (name VARCHAR(255), version INT)";
-            await this._query(creationQuery);
-        }
-
-        // get version for this table
-        const getVersionQuery = "SELECT version FROM " + this.getTable('table_versions') + " WHERE name = $1";
-
-        const versionResult = await this._query(getVersionQuery, [this.getTable(tableName)]);
-        rows = versionResult.rows;
 
         if (rows.length === 0) {
             this.log("Table " + tableName + " not found, creating");
@@ -333,59 +320,47 @@ export default class PostgresConnection extends Connection {
             creationQuery += ")";
 
             await this._query(creationQuery);
-
-            // add the version
-            const setVersionQuery = "INSERT INTO " + this.getTable('table_versions') + "(version, name) VALUES($1, $2)";
-            await this._query(setVersionQuery, [version, this.getTable(tableName)]);
         } else {
-            const dbVersion = rows[0].version;
-            if (dbVersion !== version) {
-                console.log("Version mismatch on table " + tableName + ", expected " + version + " got " + dbVersion);
+            this.log("Verifying fields on table " + tableName);
 
-                const oldFields = await this._query("SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = '" + this.getTable(tableName) + "' order by ordinal_position asc");
-                const dbFields = oldFields.rows.map((field) => {
-                    return field.column_name;
-                });
-                const localFields = Object.keys(fields);
+            const oldFields = await this._query("SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = '" + this.getTable(tableName) + "' order by ordinal_position asc");
+            const dbFields = oldFields.rows.map((field) => {
+                return field.column_name;
+            });
+            const localFields = Object.keys(fields);
 
-                const missingInDb = [];
-                for (const local of localFields) {
-                    if (!dbFields.includes(local)) {
-                        missingInDb.push(local);
+            const missingInDb = [];
+            for (const local of localFields) {
+                if (!dbFields.includes(local)) {
+                    missingInDb.push(local);
+                }
+            }
+
+            if (missingInDb.length > 0) {
+                const fieldStrings = [];
+                const rowsWithForeign: FieldWithForeign[] = [];
+                for (const missing of missingInDb) {
+                    const data = fields[missing];
+                    fieldStrings.push("ADD COLUMN " + PostgresConnection._getFieldCreationString(missing, data, '\"'));
+                    if (data.foreign) {
+                        rowsWithForeign.push({
+                            ...data,
+                            foreign: data.foreign,
+                            localField: missing,
+                        });
                     }
                 }
 
-                if (missingInDb.length > 0) {
-                    const fieldStrings = [];
-                    const rowsWithForeign: FieldWithForeign[] = [];
-                    for (const missing of missingInDb) {
-                        const data = fields[missing];
-                        fieldStrings.push("ADD COLUMN " + PostgresConnection._getFieldCreationString(missing, data, '\"'));
-                        if (data.foreign) {
-                            rowsWithForeign.push({
-                                ...data,
-                                foreign: data.foreign,
-                                localField: missing,
-                            });
-                        }
-                    }
+                const query = "ALTER TABLE \"" + this.getTable(tableName) + "\" " + fieldStrings.join(", ");
+                await this._query(query);
 
-                    const query = "ALTER TABLE \"" + this.getTable(tableName) + "\" " + fieldStrings.join(", ");
-                    await this._query(query);
-
-                    for (const rowWithForeign of rowsWithForeign) {
-                        const foreignTable = this.getTable(rowWithForeign.foreign.table.getTable());
-                        const constraintId = `fk_${rowWithForeign.foreign.field}_${foreignTable}`;
-                        const foreignQuery = `FOREIGN KEY ("${rowWithForeign.foreign.field}") REFERENCES "${foreignTable}" ("${rowWithForeign.foreign.field}")`;
-                        const fullQuery = `ALTER TABLE "${this.getTable(tableName)}" ADD CONSTRAINT ${constraintId} ${foreignQuery}`;
-                        await this._query(fullQuery);
-                    }
+                for (const rowWithForeign of rowsWithForeign) {
+                    const foreignTable = this.getTable(rowWithForeign.foreign.table.getTable());
+                    const constraintId = `fk_${rowWithForeign.foreign.field}_${foreignTable}`;
+                    const foreignQuery = `FOREIGN KEY ("${rowWithForeign.foreign.field}") REFERENCES "${foreignTable}" ("${rowWithForeign.foreign.field}")`;
+                    const fullQuery = `ALTER TABLE "${this.getTable(tableName)}" ADD CONSTRAINT ${constraintId} ${foreignQuery}`;
+                    await this._query(fullQuery);
                 }
-                await this._query(
-                    "UPDATE " + this.getTable('table_versions') + " SET version  = $1 WHERE name = $2",
-                    [version, this.getTable(tableName)],
-                );
-                console.log("Version mismatch resolved.");
             }
         }
         // create indexes

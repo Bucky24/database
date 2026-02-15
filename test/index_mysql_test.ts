@@ -91,7 +91,6 @@ describe('indexes_mysql', () => {
             indexes: [
                 { fields: ['username'] },
             ],
-            version: 1,
         });
 
         await model.init();
@@ -126,7 +125,6 @@ describe('indexes_mysql', () => {
             indexes: [
                 { fields: ['first_name', 'last_name'] },
             ],
-            version: 1,
         });
 
         await model.init();
@@ -164,7 +162,6 @@ describe('indexes_mysql', () => {
             indexes: [
                 { fields: ['email'], unique: true },
             ],
-            version: 1,
         });
 
         await model.init();
@@ -186,7 +183,6 @@ describe('indexes_mysql', () => {
             indexes: [
                 { fields: ['username'], unique: true },
             ],
-            version: 1,
         });
 
         await model.init();
@@ -208,7 +204,6 @@ describe('indexes_mysql', () => {
             indexes: [
                 { fields: ['first_name', 'last_name'], unique: true },
             ],
-            version: 1,
         });
 
         await model.init();
@@ -228,7 +223,6 @@ describe('indexes_mysql', () => {
             fields: {
                 name: { type: FIELD_TYPE.STRING, size: 100 },
             },
-            version: 1,
         });
 
         await modelV1.init();
@@ -242,7 +236,6 @@ describe('indexes_mysql', () => {
             indexes: [
                 { fields: ['name'] },
             ],
-            version: 2,
         });
 
         await modelV2.init();
@@ -261,7 +254,6 @@ describe('indexes_mysql', () => {
                 username: { type: FIELD_TYPE.STRING, size: 100 },
             },
             indexes: [{ fields: ['username']}],
-            version: 1,
         });
 
         await model.init();
@@ -289,7 +281,6 @@ describe('indexes_mysql', () => {
             indexes: [
                 { fields: ['non_existent_field'], name: 'invalid_index_table_non_existent_field_idx ' },
             ],
-            version: 1,
         });
 
         await assertThrows(async () => {
@@ -305,7 +296,6 @@ describe('indexes_mysql', () => {
             indexes: [
                 { fields: ['email'] },
             ],
-            version: 1,
         });
 
         await model.init();
@@ -331,7 +321,6 @@ describe('indexes_mysql', () => {
             indexes: [
                 { fields: ['email'], name: 'my_custom_email_index' },
             ],
-            version: 1,
         });
 
         await model.init();

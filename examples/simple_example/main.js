@@ -1,5 +1,5 @@
 const path = require('path');
-const { Model, FIELD_META, FIELD_TYPE, Connection } = require('../../build/index.js');
+const { Model, FIELD_META, FIELD_TYPE, Connection, MigrationHandler } = require('../../build/index.js');
 
 (async () => {
     const cacheDir = path.join(__dirname, 'cache');
@@ -17,10 +17,16 @@ const { Model, FIELD_META, FIELD_TYPE, Connection } = require('../../build/index
                 meta: [FIELD_META.REQUIRED],
             },
         },
-        version: 1,
     });
 
     await model.init();
+
+    MigrationHandler.registerMigration('sample_migration', async () => {
+        // no action
+    });
+
+    await MigrationHandler.runMigrations();
+
     const id = await model.insert({
         field1: 'text',
         field2: 'other text',

@@ -286,26 +286,15 @@ export default class MysqlConnection extends Connection {
         }
     }
 
-    async initializeTable(tableName: string, fields: Fields, version: number, indexes: IndexSettings[] = []) {
+    async initializeTable(tableName: string, fields: Fields, indexes: IndexSettings[] = []) {
         if (!this.connectionData) {
             throw new Error('No connection');
         }
-        const getVersionsQuery = "SELECT * FROM information_schema.tables WHERE table_schema = '" + this.connectionData.database + "' AND table_name = '" + this.getTable('table_versions') + "' LIMIT 1;"
+        const getTableQuery = "SELECT * FROM information_schema.tables WHERE table_schema = '" + this.connectionData.database + "' AND table_name = '" + this.getTable(tableName) + "' LIMIT 1;"
 
-        const tableResult = await this._query(getVersionsQuery);
+        const tableResult = await this._query(getTableQuery);
 
         if (tableResult.length === 0) {
-            this.log("Versions table not found, creating!");
-
-            const creationQuery = "CREATE TABLE " + this.getTable('table_versions') + "(name VARCHAR(255), version INT)";
-            await this._query(creationQuery);
-        }
-
-        // get version for this table
-        const getVersionQuery = "SELECT version FROM " + this.getTable('table_versions') + " WHERE name = ?";
-
-        const versionResult = await this._query(getVersionQuery, [this.getTable(tableName)]);
-        if (versionResult.length === 0) {
             this.log("Table " + tableName + " not found, creating");
             let creationQuery = "CREATE TABLE `" + this.getTable(tableName) + "` ("
 
@@ -341,57 +330,45 @@ export default class MysqlConnection extends Connection {
             creationQuery += ")";
 
             await this._query(creationQuery);
-
-            // add the version
-            const setVersionQuery = "INSERT INTO " + this.getTable('table_versions') + "(version, name) VALUES(?, ?)";
-            await this._query(setVersionQuery, [version, this.getTable(tableName)]);
         } else {
-            const dbVersion = versionResult[0].version;
-            if (dbVersion !== version) {
-                this.log("Version mismatch on table " + tableName + ", expected " + version + " got " + dbVersion);
+            this.log("Verifying fields on table " + tableName);
 
-                const oldFields = await this._query("DESCRIBE `" + this.getTable(tableName) + "`");
+            const oldFields = await this._query("DESCRIBE `" + this.getTable(tableName) + "`");
 
-                const dbFields = oldFields.map((field: any) => {
-                    return field.Field;
-                });
-                const localFields = Object.keys(fields);
-                const missingInDb = [];
-                for (const local of localFields) {
-                    if (!dbFields.includes(local)) {
-                        missingInDb.push(local);
+            const dbFields = oldFields.map((field: any) => {
+                return field.Field;
+            });
+            const localFields = Object.keys(fields);
+            const missingInDb = [];
+            for (const local of localFields) {
+                if (!dbFields.includes(local)) {
+                    missingInDb.push(local);
+                }
+            }
+
+            if (missingInDb.length > 0) {
+                const fieldStrings = [];
+                const rowsWithForeign: FieldWithForeign[] = [];
+                for (const missing of missingInDb) {
+                    const data = fields[missing];
+                    fieldStrings.push("ADD COLUMN " + MysqlConnection._getFieldCreationString(missing, data, '`'));
+                    if (data.foreign) {
+                        rowsWithForeign.push({
+                            ...data,
+                            foreign: data.foreign,
+                            localField: missing,
+                        });
                     }
                 }
 
-                if (missingInDb.length > 0) {
-                    const fieldStrings = [];
-                    const rowsWithForeign: FieldWithForeign[] = [];
-                    for (const missing of missingInDb) {
-                        const data = fields[missing];
-                        fieldStrings.push("ADD COLUMN " + MysqlConnection._getFieldCreationString(missing, data, '`'));
-                        if (data.foreign) {
-                            rowsWithForeign.push({
-                                ...data,
-                                foreign: data.foreign,
-                                localField: missing,
-                            });
-                        }
-                    }
+                const query = "ALTER TABLE `" + this.getTable(tableName) + "` " + fieldStrings.join(", ");
+                await this._query(query);
 
-                    const query = "ALTER TABLE `" + this.getTable(tableName) + "` " + fieldStrings.join(", ");
-                    await this._query(query);
-
-                    for (const rowWithForeign of rowsWithForeign) {
-                        const foreignQuery = this._getForeignConstraintString(rowWithForeign);
-                        const fullQuery = `ALTER TABLE \`${this.getTable(tableName)}\` ADD CONSTRAINT ${foreignQuery}`;
-                        await this._query(fullQuery);
-                    }
+                for (const rowWithForeign of rowsWithForeign) {
+                    const foreignQuery = this._getForeignConstraintString(rowWithForeign);
+                    const fullQuery = `ALTER TABLE \`${this.getTable(tableName)}\` ADD CONSTRAINT ${foreignQuery}`;
+                    await this._query(fullQuery);
                 }
-                await this._query(
-                    "UPDATE " + this.getTable('table_versions') + " SET version  = ? WHERE name = ?",
-                    [version, this.getTable(tableName)],
-                );
-                this.log("Version mismatch resolved.");
             }
         }
         // create indexes
