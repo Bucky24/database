@@ -1,29 +1,10 @@
 import assert from 'assert';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-
-import {
-    Connection,
-    fileConnection,
-    getDefaultConnection,
-    memoryConnection,
-    mysqlConnection,
-    postgresConnection,
-    setDefaultConnection,
-    setLog,
-} from '../src/connections/server';
-import MysqlConnection from '../src/connections/server/mysqlConnection';
-import PostgresConnection from '../src/connections/server/postgresConnection';
+import { Connection } from '../src/connections/server';
 import { Model } from '../src/model';
 import { FIELD_TYPE } from '../src/types';
 import { WHERE_COMPARE, WhereBuilder } from '../src/whereBuilder';
-import mysqlAuth from './db_mysql.json';
-import postgresAuth from './db_postgres.json';
 import { forConnections } from './connection_helper';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const cachePath = path.join(__dirname, 'cache_dir');
+import { setLog } from '../src/logger';
 
 interface ConnectionData {
     setup: () => Promise<Connection>,

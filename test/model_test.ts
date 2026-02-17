@@ -5,15 +5,12 @@ import { fileURLToPath } from 'url';
 import express, { Express } from 'express';
 import request from 'supertest';
 
-import { fileConnection, getDefaultConnection, mysqlConnection, postgresConnection, setDefaultConnection, setLog, memoryConnection } from '../src/connections/server';
-import MysqlConnection from '../src/connections/server/mysqlConnection';
-import PostgresConnection from '../src/connections/server/postgresConnection';
+import { fileConnection, setDefaultConnection } from '../src/connections/server';
 import { Model } from '../src/model';
-import mysqlAuth from './db_mysql.json';
-import postgresAuth from './db_postgres.json';
 import { FIELD_META, FIELD_TYPE, ORDER } from '../src/types';
 import { WHERE_COMPARE, WhereBuilder } from '../src/whereBuilder';
 import { forConnections } from './connection_helper';
+import { setLog } from '../src/logger';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const cachePath = path.join(__dirname, 'cache_dir');

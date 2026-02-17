@@ -1,3 +1,4 @@
+import { info } from "./logger";
 import { Model } from "./model";
 import { FIELD_META, FIELD_TYPE } from "./types";
 
@@ -44,11 +45,11 @@ export class MigrationHandler {
                 continue;
             }
 
-            console.log(`Running migration ${migration.name}`);
+            info(`Running migration ${migration.name}`);
 
             await migration.cb();
 
-            console.log(`Migration ${migration.name} complete`);
+            info(`Migration ${migration.name} complete`);
 
             await migrationTable.insert({
                 migration: migration.name,

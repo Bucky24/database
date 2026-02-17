@@ -4,6 +4,7 @@ import path from 'path';
 import { Connection } from '../client';
 import { Model } from '../src/model';
 import { FIELD_TYPE } from '../src/types';
+import { setLog } from '../src/logger';
 
 const assertThrows = async (fn: Function, message?: string) => {
     let error: Error | null = null;
@@ -25,7 +26,7 @@ interface ConnectionData {
 }
 
 describe('Client tests', async () => {  
-    Connection.setLog(false);
+    setLog(false);
 
     const connections: { [key: string]: ConnectionData } = {
         'memory': {

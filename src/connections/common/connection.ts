@@ -1,11 +1,6 @@
 import { Fields, NestedObject, OrderObj, IndexSettings } from "../../types";
 import { WhereBuilder } from "../../whereBuilder";
-
-let allowLog = true;
-
-export function setLog(log: boolean) {
-    allowLog = log;
-}
+import { info } from "../../logger";
 
 export class Connection {
     protected connection: any;
@@ -34,10 +29,7 @@ export class Connection {
     }
 
     log(message: string) {
-        if (!allowLog) {
-            return;
-        }
-        console.log(message);
+        info(message);
     }
 
     getTable(table: string) {

@@ -504,3 +504,9 @@ This method instructs the `MigrationHandler` to run any migrations that have not
 NOTE: This method expects that a default connection is set, and that all tables are already initialized.
 
 This method takes in no parameters, but does return a `Promise` that you should await before continuing with server startup.
+
+## Misc
+
+### setLog
+
+This method takes in a boolean and disables or enables logs. This can be helpful if you want to ignore logs for tests.
