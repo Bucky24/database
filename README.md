@@ -5,7 +5,7 @@ If you've found this, there are probably better modules for this with lots of fa
 
 # Frontend
 
-This module can be used in the browser. Only the `MemoryConnection` is available. To use, import from `@bucky24/database/client`. All other functions should work as expected. Note that if you have any models you are sharing between server and client, they _must_ import from `@bucky24/database/client` otherwise you'll have build problems with your client.
+This module can be used in the browser. Only the `MemoryConnection` is available. To use, import from `@bucky24/database/client`. All other functions should work as expected. Note that if you have any models you are sharing between server and client, they _must_ import from `@bucky24/database/client` otherwise you'll have build problems with your client. Basically if you're planning to share, then you should use `@bucky24/database/client` in all cases except for the one file where your server connection is setup. That one can import from `@bucky24/database` to get the server connections.
 
 NOTE: You may see a warning 
 

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Connection } from '../common/connection';
-import { WhereBuilder } from '../../whereBuilder';
+import { NestedWhere, WhereBuilder } from '../../whereBuilder';
 import { FIELD_META, FIELD_TYPE, Fields, IndexSettings, NestedObject, ORDER, OrderObj } from '../../types';
 import { doesRowMatchClause } from '../common/helpers';
 
@@ -66,7 +66,10 @@ export default class FileConnection extends Connection {
         const data = this._readCacheFile(tableName);
         for (let i=startRow;i<data.data.length;i++) {
             const obj = data.data[i];
-            const matches = doesRowMatchClause(whereClause, obj);
+            const matches = await doesRowMatchClause(whereClause, obj, async (nested: NestedWhere) => {
+                const results = await this.search(nested.externalTable, nested.where);
+                return results.map((row) => row[nested.externalField] ?? null);
+            });
 
             if (matches) {
                 matching.push(obj);

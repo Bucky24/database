@@ -16,6 +16,7 @@
     },
     "scripts": {
         "test": "mocha --exit",
+        "test-one": "mocha --exit --config .mocharc.base.json",
         "build": "rm -rf build && tsup",
         "prepare": "npm run build"
     },

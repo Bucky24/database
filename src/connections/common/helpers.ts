@@ -1,5 +1,5 @@
 import { NestedObject } from "../../types";
-import { WHERE_COMPARE, WHERE_TYPE, WhereBuilder } from "../../whereBuilder";
+import { NestedWhere, WHERE_COMPARE, WHERE_TYPE, WhereBuilder } from "../../whereBuilder";
 
 export function compareValues(value1: any, value2: any, negated = false) {
     const result = (res: boolean) => {
@@ -30,7 +30,7 @@ export function compareValues(value1: any, value2: any, negated = false) {
     return result(true);
 }
 
-export function doesRowMatchClause(whereClause: WhereBuilder | NestedObject, obj: any) {
+export async function doesRowMatchClause(whereClause: WhereBuilder | NestedObject, obj: any, nestedSearch: (nested: NestedWhere) => Promise<any[]>) {
     // for some weird reason when we convert to JS, the instanceof is no longer working,
     // so fall back to checking the constructor name
     if (whereClause instanceof WhereBuilder || whereClause.constructor.name === "WhereBuilder") {
@@ -58,7 +58,7 @@ export function doesRowMatchClause(whereClause: WhereBuilder | NestedObject, obj
             }
         } else if (whereClause.getType() === WHERE_TYPE.OR) {
             for (const child of whereClause.getChildren()) {
-                const localResult = doesRowMatchClause(child, obj);
+                const localResult = await doesRowMatchClause(child, obj, nestedSearch);
                 if (localResult) {
                     // for OR, any success is fine
                     return true;
@@ -66,7 +66,7 @@ export function doesRowMatchClause(whereClause: WhereBuilder | NestedObject, obj
             }
         } else if (whereClause.getType() === WHERE_TYPE.AND) {
             for (const child of whereClause.getChildren()) {
-                const localResult = doesRowMatchClause(child, obj);
+                const localResult = await doesRowMatchClause(child, obj, nestedSearch);
                 if (!localResult) {
                     // for AND, any failure fails all
                     return false;
@@ -74,6 +74,17 @@ export function doesRowMatchClause(whereClause: WhereBuilder | NestedObject, obj
             }
 
             return true;
+        } else if (whereClause.getType() === WHERE_TYPE.NESTED) {
+            const nestedResults = await nestedSearch({
+                externalTable: whereClause.getTable(),
+                externalField: whereClause.getExternalField(),
+                localField: whereClause.getField(),
+                where: whereClause.getValue() as WhereBuilder | NestedObject,
+            });
+
+            const searchValue = obj[whereClause.getField()];
+
+            return nestedResults.includes(searchValue);
         } else {
             throw new Error(`Unknown WhereBuilder type ${whereClause.getType()}`);
         }

@@ -1,0 +1,5 @@
+{
+  "require": "tsx",
+  "extension": ["ts"],
+  "exit": true
+}

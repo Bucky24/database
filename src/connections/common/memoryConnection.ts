@@ -1,5 +1,5 @@
 import { FIELD_META, FIELD_TYPE, Fields, IndexSettings, NestedObject, ORDER, OrderObj } from '../../types';
-import { WhereBuilder } from '../../whereBuilder';
+import { NestedWhere, WHERE_TYPE, WhereBuilder } from '../../whereBuilder';
 import { Connection } from './connection';
 import { doesRowMatchClause } from './helpers';
 
@@ -105,7 +105,12 @@ export default class MemoryConnection extends Connection {
         const data = MemoryConnection.memoryData[tableName];
         for (let i=startRow;i<data.rows.length;i++) {
             const obj = data.rows[i];
-            const matches = doesRowMatchClause(whereClause, obj);
+            const matches = await doesRowMatchClause(whereClause, obj, async (nested: NestedWhere) => {
+                const rows = await this.search(nested.externalTable, nested.where);
+                return rows.map((row) => {
+                    return row[nested.externalField] ?? null;
+                });
+            });
 
             if (matches) {
                 matching.push({...obj});

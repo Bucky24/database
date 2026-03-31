@@ -1,7 +1,10 @@
+import { NestedObject } from "./types";
+
 export enum WHERE_TYPE {
     AND='where/and',
     OR='where/or',
     COMPARE='where/compare',
+    NESTED='where/nested',
 };
 
 export enum WHERE_COMPARE {
@@ -13,6 +16,13 @@ export enum WHERE_COMPARE {
     GTE='where/gte',
 };
 
+export type NestedWhere = {
+    externalTable: string;
+    localField: string;
+    externalField: string;
+    where: WhereBuilder | NestedObject;
+};
+
 type BuilderFunction = (builder: WhereBuilder) => void;
 
 export class WhereBuilder {
@@ -20,16 +30,18 @@ export class WhereBuilder {
     private children: WhereBuilder[];
     private comparison: WHERE_COMPARE | null;
     private field: string | null;
+    private externalField: string | null;
     private value: any;
-    private negated: boolean;
+    private table: string | null;
 
     constructor(type = WHERE_TYPE.AND) {
         this.type = type;
         this.children = [];
         this.comparison = null;
         this.field = null;
+        this.externalField = null;
         this.value = null;
-        this.negated = false;
+        this.table = null;
     }
 
     static new(): WhereBuilder {
@@ -55,7 +67,18 @@ export class WhereBuilder {
         child.comparison = compare;
         child.field = field;
         child.value = value;
-        child.negated = false;
+
+        this.children.push(child);
+
+        return this;
+    }
+
+    nested(data: NestedWhere): WhereBuilder {
+        const child = new WhereBuilder(WHERE_TYPE.NESTED);
+        child.table = data.externalTable;
+        child.field = data.localField;
+        child.externalField = data.externalField;
+        child.value = data.where;
 
         this.children.push(child);
 
@@ -63,11 +86,11 @@ export class WhereBuilder {
     }
 
     // utils
-
     getAllFields(): string[] {
         let fields: string[] = [];
 
-        if (this.type === WHERE_TYPE.COMPARE) {
+        // nested will not send its child fields, since they will be on a different table
+        if (this.type === WHERE_TYPE.COMPARE || this.type === WHERE_TYPE.NESTED) {
             if (this.field) {
                 fields.push(this.field);
             }
@@ -88,6 +111,14 @@ export class WhereBuilder {
 
     getField(): string | null {
         return this.field;
+    }
+
+    getTable(): string | null {
+        return this.table;
+    }
+
+    getExternalField(): string | null {
+        return this.externalField;
     }
 
     getValue(): any {
