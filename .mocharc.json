@@ -1,4 +1,4 @@
 {
-    "extends": "./mocharc.base.json",
+    "extends": "./.mocharc.base.json",
     "spec": "test/**/*_test.ts"
   }

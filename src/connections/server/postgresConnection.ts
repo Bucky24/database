@@ -255,6 +255,14 @@ export default class PostgresConnection extends Connection {
                     values,
                     questionCount,
                 };
+            } else if (whereClause.getType() === WHERE_TYPE.NESTED) {
+                const { where: childWhere, values: childValues, questionCount: childQuestionCount } = this._getWhere(whereClause.getValue() as WhereBuilder | NestedObject, questionCount);
+                const query = `\"${whereClause.getField()}\" in (SELECT \"${whereClause.getExternalField()}\" FROM \"${whereClause.getTable()}\" WHERE ${childWhere})`
+                return {
+                    where: query,
+                    values: childValues,
+                    questionCount: childQuestionCount
+                };
             } else {
                 throw new Error(`Unknown WhereBuilder type ${whereClause.getType()}`);
             }

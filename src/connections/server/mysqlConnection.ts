@@ -266,6 +266,13 @@ export default class MysqlConnection extends Connection {
                     where: fieldList.join(" OR "),
                     values,
                 };
+            } else if (whereClause.getType() === WHERE_TYPE.NESTED) {
+                const { where: childWhere, values: childValues } = this._generateWhere(whereClause.getValue() as WhereBuilder | NestedObject);
+                const query = `${whereClause.getField()} in (SELECT ${whereClause.getExternalField()} FROM \`${whereClause.getTable()}\` WHERE ${childWhere})`
+                return {
+                    where: query,
+                    values: childValues,
+                };
             } else {
                 throw new Error(`Unknown WhereBuilder type ${whereClause.getType()}`);
             }
