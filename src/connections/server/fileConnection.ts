@@ -156,8 +156,8 @@ export default class FileConnection extends Connection {
         
         for (const tableField in tableFields) {
             const fieldData = tableFields[tableField];
-            // default it all to nulls, the insertData will override
-            newObj[tableField] = null;
+            // use field default or fallback to null, the insertData will override
+            newObj[tableField] = fieldData.default || null;
             if (fieldData.meta?.includes(FIELD_META.AUTO)) {
                 if (!data.auto[tableField]) {
                     data.auto[tableField] = 1;

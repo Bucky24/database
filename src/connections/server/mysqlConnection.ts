@@ -161,6 +161,17 @@ export default class MysqlConnection extends Connection {
             }
         }
 
+        if (data.default) {
+            fieldRow += ' DEFAULT ';
+            if (data.type === FIELD_TYPE.STRING) {
+                fieldRow += `"${data.default}"`;
+            } else if (data.type === FIELD_TYPE.JSON) {
+                fieldRow += `"${JSON.stringify(data.default)}"`;
+            } else {
+                fieldRow += data.default;
+            }
+        }
+
         return fieldRow;
     }
 

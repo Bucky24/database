@@ -46,6 +46,7 @@ export interface Field {
         table: ModelStub;
         field: string;
     };
+    default?: unknown;
 }
 
 export interface FieldWithForeign extends Field {

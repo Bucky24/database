@@ -124,8 +124,13 @@ export default class PostgresConnection extends Connection {
         });
     }
 
-    static _getFieldCreationString(fieldName: string, data: Field, ticks: string) {
-        let fieldRow = ticks + fieldName + ticks + " " + PostgresConnection._getColumnFromType(data.type, data);
+    _getFieldCreationString(fieldName: string, data: Field, ticks: string) {
+        const auto = data.meta && data.meta.includes(FIELD_META.AUTO)
+
+        let fieldRow = ticks + fieldName + ticks;
+        if (!auto) {
+            fieldRow += " " + PostgresConnection._getColumnFromType(data.type, data);
+        }
 
         if (data.meta) {
             if (data.meta.includes(FIELD_META.REQUIRED)) {
@@ -134,6 +139,22 @@ export default class PostgresConnection extends Connection {
             if (data.meta.includes(FIELD_META.AUTO)) {
                 fieldRow += ' AUTO_INCREMENT';
             }
+        }
+
+        if (data.default) {
+            fieldRow += ' DEFAULT ';
+            if (data.type === FIELD_TYPE.STRING) {
+                fieldRow += `"${data.default}"`;
+            } else if (data.type === FIELD_TYPE.JSON) {
+                fieldRow += `"${JSON.stringify(data.default)}"`;
+            } else {
+                fieldRow += data.default;
+            }
+        }
+
+        if (data.foreign) {
+            const foreignTable = this.getTable(data.foreign.table.getTable());
+            fieldRow += ` REFERENCES "${foreignTable}" ("${data.foreign.field}")`;
         }
 
         return fieldRow;
@@ -300,26 +321,7 @@ export default class PostgresConnection extends Connection {
             const fieldList = Object.keys(fields).map((fieldName) => {
                 const data = fields[fieldName];
 
-                const auto = data.meta && data.meta.includes(FIELD_META.AUTO)
-
-                let fieldRow = `"${fieldName}"`;
-                if (!auto) {
-                    fieldRow += " " + PostgresConnection._getColumnFromType(data.type, data);
-                }
-
-                if (data.meta) {
-                    if (data.meta.includes(FIELD_META.REQUIRED)) {
-                        fieldRow += ' NOT NULL'
-                    }
-                    if (data.meta.includes(FIELD_META.AUTO)) {
-                        fieldRow += ' SERIAL PRIMARY KEY';
-                    }
-                }
-
-                if (data.foreign) {
-                    const foreignTable = this.getTable(data.foreign.table.getTable());
-                    fieldRow += ` REFERENCES "${foreignTable}" ("${data.foreign.field}")`;
-                }
+                const fieldRow = this._getFieldCreationString(fieldName, data, '\"');
 
                 return fieldRow;
             });
@@ -349,7 +351,7 @@ export default class PostgresConnection extends Connection {
                 const rowsWithForeign: FieldWithForeign[] = [];
                 for (const missing of missingInDb) {
                     const data = fields[missing];
-                    fieldStrings.push("ADD COLUMN " + PostgresConnection._getFieldCreationString(missing, data, '\"'));
+                    fieldStrings.push("ADD COLUMN " + this._getFieldCreationString(missing, data, '\"'));
                     if (data.foreign) {
                         rowsWithForeign.push({
                             ...data,

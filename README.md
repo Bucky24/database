@@ -163,6 +163,7 @@ A Field is an object with the following parameters:
 | meta | Array | Array of FIELD_META. Optional |
 | size | Int | Size of the field. Used with FIELD_TYPE.STRING. Optional |
 | foreign | ForeignKey | Data for any foreign key connections. Optional |
+| default | Any | Used as the default value for the field. Optional |
 
 *Note:* The foreign keys must be added as the field is. The system does not know how to add them to an already existing field.
 

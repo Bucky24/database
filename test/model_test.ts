@@ -283,6 +283,48 @@ describe('model', async () => {
         
                 assert.deepStrictEqual(result, [{ id: 1, foo: 1 }]);
             });
+
+            it.only('should use default if field not given', async () => {
+                const model = Model.create({
+                    table: "table",
+                    fields: {
+                        foo: {
+                            type: FIELD_TYPE.STRING,
+                            default: 'blah'
+                        },
+                    },
+                });
+                await model.init();
+                const id = await model.insert({});
+
+                const content = await model.get(id);
+                assert.deepStrictEqual(content, {
+                    id,
+                    foo: 'blah',
+                });
+            });
+
+            it.only('should override default if field given', async () => {
+                const model = Model.create({
+                    table: "table",
+                    fields: {
+                        foo: {
+                            type: FIELD_TYPE.STRING,
+                            default: 'blah'
+                        },
+                    },
+                });
+                await model.init();
+                const id = await model.insert({
+                    foo: 'bar',
+                });
+
+                const content = await model.get(id);
+                assert.deepStrictEqual(content, {
+                    id,
+                    foo: 'bar',
+                });
+            });
         });
         
         describe('get', () => {

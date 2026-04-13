@@ -20,6 +20,7 @@ const modelSchema = object({
                             table: object().required(),
                             field: string().required(),
                         }).default(undefined),
+                        default: mixed(),
                     }),
                 };
             }, {}),
