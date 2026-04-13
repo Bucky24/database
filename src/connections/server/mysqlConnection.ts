@@ -149,8 +149,8 @@ export default class MysqlConnection extends Connection {
         }
     }
 
-    static _getFieldCreationString(fieldName: string, data: Field, ticks: string) {
-        let fieldRow = ticks + fieldName + ticks + " " + this._getColumnFromType(data.type, data);
+    _getFieldCreationString(fieldName: string, data: Field, ticks: string) {
+        let fieldRow = ticks + fieldName + ticks + " " + MysqlConnection._getColumnFromType(data.type, data);
 
         if (data.meta) {
             if (data.meta.includes(FIELD_META.REQUIRED)) {
@@ -162,13 +162,16 @@ export default class MysqlConnection extends Connection {
         }
 
         if (data.default) {
-            fieldRow += ' DEFAULT ';
             if (data.type === FIELD_TYPE.STRING) {
-                fieldRow += `"${data.default}"`;
+                if (!data.size) {
+                    this.log(`MySQL does not support defaults on TEXT columns, ignoring`);
+                } else {
+                    fieldRow += ` DEFAULT "${data.default}"`;
+                }
             } else if (data.type === FIELD_TYPE.JSON) {
-                fieldRow += `"${JSON.stringify(data.default)}"`;
+                fieldRow += ` DEFAULT "${JSON.stringify(data.default)}"`;
             } else {
-                fieldRow += data.default;
+                fieldRow += ` DEFAULT ${data.default}`;
             }
         }
 
@@ -333,7 +336,7 @@ export default class MysqlConnection extends Connection {
                     });
                 }
 
-                return MysqlConnection._getFieldCreationString(fieldName, data, '');
+                return this._getFieldCreationString(fieldName, data, '`');
             });
 
             if (autoColumn) {
@@ -369,7 +372,7 @@ export default class MysqlConnection extends Connection {
                 const rowsWithForeign: FieldWithForeign[] = [];
                 for (const missing of missingInDb) {
                     const data = fields[missing];
-                    fieldStrings.push("ADD COLUMN " + MysqlConnection._getFieldCreationString(missing, data, '`'));
+                    fieldStrings.push("ADD COLUMN " + this._getFieldCreationString(missing, data, '`'));
                     if (data.foreign) {
                         rowsWithForeign.push({
                             ...data,

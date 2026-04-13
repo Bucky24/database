@@ -128,25 +128,24 @@ export default class PostgresConnection extends Connection {
         const auto = data.meta && data.meta.includes(FIELD_META.AUTO)
 
         let fieldRow = ticks + fieldName + ticks;
-        if (!auto) {
-            fieldRow += " " + PostgresConnection._getColumnFromType(data.type, data);
-        }
+        const fieldType = PostgresConnection._getColumnFromType(data.type, data);
+        fieldRow += " " + fieldType;
 
         if (data.meta) {
             if (data.meta.includes(FIELD_META.REQUIRED)) {
                 fieldRow += ' NOT NULL'
             }
             if (data.meta.includes(FIELD_META.AUTO)) {
-                fieldRow += ' AUTO_INCREMENT';
+                fieldRow += ' GENERATED ALWAYS AS IDENTITY PRIMARY KEY';
             }
         }
 
         if (data.default) {
             fieldRow += ' DEFAULT ';
             if (data.type === FIELD_TYPE.STRING) {
-                fieldRow += `"${data.default}"`;
+                fieldRow += `'${data.default}'`;
             } else if (data.type === FIELD_TYPE.JSON) {
-                fieldRow += `"${JSON.stringify(data.default)}"`;
+                fieldRow += `'${JSON.stringify(data.default)}'::json`;
             } else {
                 fieldRow += data.default;
             }
