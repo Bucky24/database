@@ -33,7 +33,7 @@ describe('model', async () => {
     const filePath = path.join(cachePath, "table.json");
     setLog(false);
 
-    forConnections(async () => {
+    forConnections(async (connectionType: string) => {
         describe('setup', () => {
             it('should error when no default connection set', async () => {
                 setDefaultConnection(null);
@@ -969,6 +969,115 @@ describe('model', async () => {
                     },
                 ]);
             });
+
+            it('should handle adding a new required field to existing rows with default', async () => {
+                const model = Model.create({
+                    table: "table",
+                    fields: {
+                        foo: {
+                            type: FIELD_TYPE.STRING,
+                            meta: [FIELD_META.REQUIRED],
+                        },
+                        bar: {
+                            type: FIELD_TYPE.JSON,
+                        },
+                    },
+                });
+
+                await model.init();
+
+                await model.insert({
+                    foo: 'foo',
+                    bar: { field: 0 },
+                });
+
+                const newModel = Model.create({
+                    table: 'table',
+                    fields: {
+                        foo: {
+                            type: FIELD_TYPE.STRING,
+                            meta: [FIELD_META.REQUIRED],
+                        },
+                        bar: {
+                            type: FIELD_TYPE.JSON,
+                        },
+                        second_field: {
+                            type: FIELD_TYPE.INT,
+                            meta: [FIELD_META.REQUIRED],
+                            default: 0,
+                        },
+                    },
+                });
+
+                await newModel.init();
+
+                await newModel.insert({
+                    foo: 'bar',
+                    second_field: 5,
+                });
+
+                const rows = await newModel.search();
+                assert.deepStrictEqual(rows, [
+                    {
+                        foo: 'foo',
+                        bar: { field: 0 },
+                        second_field: 0,
+                        id: 1,
+                    },
+                    {
+                        foo: 'bar',
+                        bar: null,
+                        second_field: 5,
+                        id: 2,
+                    },
+                ]);
+            });
+
+            // mysql will auto-figure out defaults
+            if (connectionType !== 'mysql') {
+                it('should throw an error when adding a new rquired field to existing rows with no default', async () => {
+    const model = Model.create({
+                        table: "table",
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                                meta: [FIELD_META.REQUIRED],
+                            },
+                            bar: {
+                                type: FIELD_TYPE.JSON,
+                            },
+                        },
+                    });
+
+                    await model.init();
+
+                    await model.insert({
+                        foo: 'foo',
+                        bar: { field: 0 },
+                    });
+
+                    const newModel = Model.create({
+                        table: 'table',
+                        fields: {
+                            foo: {
+                                type: FIELD_TYPE.STRING,
+                                meta: [FIELD_META.REQUIRED],
+                            },
+                            bar: {
+                                type: FIELD_TYPE.JSON,
+                            },
+                            second_field: {
+                                type: FIELD_TYPE.INT,
+                                meta: [FIELD_META.REQUIRED],
+                            },
+                        },
+                    });
+
+                    await assertThrows(async () => {
+                        await newModel.init();
+                    });
+                });
+            }
         });
 
         describe('count', async () => {

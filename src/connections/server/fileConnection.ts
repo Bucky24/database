@@ -4,6 +4,13 @@ import { Connection } from '../common/connection';
 import { NestedWhere, WhereBuilder } from '../../whereBuilder';
 import { FIELD_META, FIELD_TYPE, Fields, IndexSettings, NestedObject, ORDER, OrderObj } from '../../types';
 import { doesRowMatchClause } from '../common/helpers';
+import { difference } from '../../utils';
+
+type FileTableData = {
+    data: NestedObject[];
+    fields?: Fields;
+    auto: { [field: string]: number };
+}
 
 export default class FileConnection extends Connection {
     private cacheDir: string;
@@ -39,20 +46,47 @@ export default class FileConnection extends Connection {
         const cacheFilePath = this._getCacheFilePath(tableName);
         if (!fs.existsSync(cacheFilePath)) {
             this._writeCacheFile(tableName, {
+                fields,
                 auto: {},
                 data: [],
             });
         }
+
+        // let's see if we added any fields
+        const tableData = this._readCacheFile(tableName);
+        const oldFields = tableData.fields || {};
+        const newFieldNames = difference<string>(Object.keys(fields), Object.keys(oldFields));
+
+        for (const newFieldName of newFieldNames) {
+            const newFieldData = fields[newFieldName];
+            // we need to handle if there are existing rows
+            if (tableData.data.length > 0) {
+                // in this case, if our field is required, and there's no default that's an error
+                if (newFieldData.meta?.includes(FIELD_META.REQUIRED) && newFieldData.default === undefined) {
+                    throw new Error(`Table ${tableName} field ${newFieldName} is required but provides no default. Unable to update existing rows`);
+                }
+
+                // if we got here, we just need to update the rows in case of a default
+                if (newFieldData.default !== undefined) {
+                    for (const row of tableData.data) {
+                        row[newFieldName] = newFieldData.default;
+                    }
+                }
+            }
+        }
+
+        tableData.fields = fields;
+        this._writeCacheFile(tableName, tableData);
     }
 
-    private _readCacheFile(tableName: string) {
+    private _readCacheFile(tableName: string): FileTableData {
         const cacheFilePath = this._getCacheFilePath(tableName);
         
         const data = fs.readFileSync(cacheFilePath, 'utf8');
         return JSON.parse(data);
     }
 
-    private _writeCacheFile(tableName: string, data: NestedObject) {
+    private _writeCacheFile(tableName: string, data: FileTableData) {
         const cacheFilePath = this._getCacheFilePath(tableName);
         
         fs.writeFileSync(cacheFilePath, JSON.stringify(data, null, 4));
@@ -152,7 +186,7 @@ export default class FileConnection extends Connection {
         const data = this._readCacheFile(tableName);
 
         let newObj: NestedObject = {};
-        let newId = null;
+        let newId = -1;
         
         for (const tableField in tableFields) {
             const fieldData = tableFields[tableField];

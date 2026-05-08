@@ -140,7 +140,7 @@ export default class PostgresConnection extends Connection {
             }
         }
 
-        if (data.default) {
+        if (data.default !== undefined) {
             fieldRow += ' DEFAULT ';
             if (data.type === FIELD_TYPE.STRING) {
                 fieldRow += `'${data.default}'`;

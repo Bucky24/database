@@ -17,7 +17,7 @@ interface ConnectionData {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const cachePath = path.join(__dirname, 'cache_dir');
 
-export function forConnections(cb: () => Promise<void>): void {
+export function forConnections(cb: (connectionType: string) => Promise<void>): void {
     const connections: { [key: string]: ConnectionData}  = {
         'memory': {
             setup: () => {
@@ -133,7 +133,7 @@ export function forConnections(cb: () => Promise<void>): void {
                 setDefaultConnection(null);
             });
 
-            cb();
+            cb(connectionType);
         });
     }
 }
