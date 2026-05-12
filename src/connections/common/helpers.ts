@@ -1,5 +1,5 @@
 import { NestedObject } from "../../types";
-import { NestedWhere, WHERE_COMPARE, WHERE_TYPE, WhereBuilder } from "../../whereBuilder";
+import { NestedWhere, WHERE_ARITHMATIC, WHERE_COMPARE, WHERE_TYPE, WhereArithmatic, WhereBuilder, WhereBuilderValue } from "../../whereBuilder";
 
 export function compareValues(value1: any, value2: any, negated = false) {
     const result = (res: boolean) => {
@@ -30,6 +30,48 @@ export function compareValues(value1: any, value2: any, negated = false) {
     return result(true);
 }
 
+function extractWhereValue(obj: any, value: WhereBuilderValue): any {
+    if (typeof value === "string") {
+        if (value.startsWith("field.")) {
+            const [_, field] = value.split("field.");
+            return obj[field];
+        }
+
+        return value;
+    }
+    
+    if (typeof value === "number" || value === null) {
+        return value;
+    }
+
+    // must be an object then
+    const valueAsObj = value as Object;
+
+    // only valid object is a WhereArithmatic
+    if (valueAsObj.hasOwnProperty('operator')) {
+        const arithmatic = valueAsObj as WhereArithmatic;
+
+        const left = extractWhereValue(obj, arithmatic.left);
+        const right = extractWhereValue(obj, arithmatic.right);
+
+        switch (arithmatic.operator) {
+            case WHERE_ARITHMATIC.PLUS:
+                return left + right;
+            case WHERE_ARITHMATIC.MINUS:
+                return left - right;
+            case WHERE_ARITHMATIC.DIVIDE:
+                return left / right;
+            case WHERE_ARITHMATIC.TIMES:
+                return left * right;
+            default:
+                throw new Error(`Invalid arithmatic operator ${arithmatic.operator}`);
+        }
+    }
+
+    // failure
+    throw new Error(`Invalid where value ${value}`);
+}
+
 export async function doesRowMatchClause(whereClause: WhereBuilder | NestedObject, obj: any, nestedSearch: (nested: NestedWhere) => Promise<any[]>) {
     // for some weird reason when we convert to JS, the instanceof is no longer working,
     // so fall back to checking the constructor name
@@ -40,7 +82,7 @@ export async function doesRowMatchClause(whereClause: WhereBuilder | NestedObjec
                 // we can't really compare against a null field
                 return false;
             }
-            const value = whereClause.getValue();
+            const value = extractWhereValue(obj, whereClause.getValue());
             if (whereClause.getComparison() === WHERE_COMPARE.EQ) {
                 return compareValues(value, obj[key]);
             } else if (whereClause.getComparison() === WHERE_COMPARE.NE) {

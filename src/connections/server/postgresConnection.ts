@@ -1,6 +1,7 @@
-import { WhereBuilder, WHERE_COMPARE, WHERE_TYPE } from '../../whereBuilder';
+import { WhereBuilder, WHERE_COMPARE, WHERE_TYPE, WhereArithmaticValue, WhereArithmatic, WHERE_ARITHMATIC } from '../../whereBuilder';
 import { Connection } from '../common/connection';
 import { Field, FIELD_META, FIELD_TYPE, Fields, FieldWithForeign, NestedObject, ORDER, OrderObj, IndexSettings } from '../../types';
+import { postgresConnection } from '.';
 
 export interface PostgresConnectionUrl {
     url: string;
@@ -159,6 +160,81 @@ export default class PostgresConnection extends Connection {
         return fieldRow;
     }
 
+    static _generateWhereArithmatic(value: WhereArithmaticValue, questionCount: number): { query: string, values: any[] } {
+        if (typeof value === "string") {
+            if (value.startsWith("field.")) {
+                const [_, field] = value.split("field.");
+                return {
+                    query: field,
+                    values: [],
+                };
+            }
+
+            return {
+                query: `$${questionCount + 1}::text`,
+                values: [`"${value}"`],
+            };
+        }
+        
+        if (typeof value === "number" || typeof value === "boolean") {
+            // figure out what type postgres wants for this data
+            let type = "boolean";
+            if (typeof value === "number") {
+                if (Math.floor(value) !== value) {
+                    type = "double precision";
+                } else {
+                    type = "integer";
+                }
+            }
+
+            return {
+                query: `$${questionCount + 1}::${type}`,
+                values: [value],
+            };
+        }
+
+        if (value === null) {
+            return {
+                query: `null`,
+                values: [],
+            };
+        }
+
+        const valueAsObj = value as Object;
+
+        if (valueAsObj.hasOwnProperty('operator')) {
+            const arithmatic = valueAsObj as WhereArithmatic;
+
+            const leftResult = PostgresConnection._generateWhereArithmatic(arithmatic.left, questionCount);
+            questionCount += leftResult.values.length;
+            const rightResult = PostgresConnection._generateWhereArithmatic(arithmatic.right, questionCount);
+
+            const values = [...leftResult.values, ...rightResult.values];
+
+            let operator = '';
+            switch (arithmatic.operator) {
+                case WHERE_ARITHMATIC.DIVIDE:
+                    operator = '/';
+                    break;
+                case WHERE_ARITHMATIC.MINUS:
+                    operator = "-";
+                    break;
+                case WHERE_ARITHMATIC.PLUS:
+                    operator = "+";
+                    break;
+                case WHERE_ARITHMATIC.TIMES:
+                    operator = "*";
+                    break;
+            }
+            return {
+                query: `(${leftResult.query} ${operator} ${rightResult.query})`,
+                values,
+            }
+        }
+
+        throw new Error(`Unexpected object in WhereBuilder that does not conform to WhereArithmatic (${valueAsObj}`);
+    }
+
     static _getEquality(key: string | null, value: any, questionCount: number, negated = false) {
         if (Array.isArray(value)) {
             const values = [];
@@ -177,6 +253,13 @@ export default class PostgresConnection extends Connection {
             return {
                 where: `"${key}" ${negated ? 'is not': 'is'} null`,
                 values: [],
+            };
+        } else if (typeof value === "object") {
+            const result = PostgresConnection._generateWhereArithmatic(value, questionCount);
+
+            return {
+                where: `${key} ${negated ? '!=' : '='} ${result.query}`,
+                values: result.values,
             };
         } else if (value === false) {
             if (negated) {
@@ -219,28 +302,32 @@ export default class PostgresConnection extends Connection {
                         questionCount: questionCount + values.length,
                     };
                 } else if (whereClause.getComparison() === WHERE_COMPARE.LT) {
+                    const { query, values } = PostgresConnection._generateWhereArithmatic(whereClause.getValue(), questionCount);
                     return {
-                        where: `"${whereClause.getField()}" < $${questionCount+1}`,
-                        values: [whereClause.getValue()],
-                        questionCount: questionCount + 1,
+                        where: `"${whereClause.getField()}" < ${query}`,
+                        values,
+                        questionCount: questionCount + values.length,
                     };
                 } else if (whereClause.getComparison() === WHERE_COMPARE.LTE) {
+                    const { query, values } = PostgresConnection._generateWhereArithmatic(whereClause.getValue(), questionCount);
                     return {
-                        where: `"${whereClause.getField()}" <= $${questionCount+1}`,
-                        values: [whereClause.getValue()],
-                        questionCount: questionCount + 1,
+                        where: `"${whereClause.getField()}" <= ${query}`,
+                        values,
+                        questionCount: questionCount + values.length,
                     };
                 } else if (whereClause.getComparison() === WHERE_COMPARE.GT) {
+                    const { query, values } = PostgresConnection._generateWhereArithmatic(whereClause.getValue(), questionCount);
                     return {
-                        where: `"${whereClause.getField()}" > $${questionCount+1}`,
-                        values: [whereClause.getValue()],
-                        questionCount: questionCount + 1,
+                        where: `"${whereClause.getField()}" > ${query}`,
+                        values,
+                        questionCount: questionCount + values.length,
                     };
                 } else if (whereClause.getComparison() === WHERE_COMPARE.GTE) {
+                    const { query, values } = PostgresConnection._generateWhereArithmatic(whereClause.getValue(), questionCount);
                     return {
-                        where: `"${whereClause.getField()}" >= $${questionCount+1}`,
-                        values: [whereClause.getValue()],
-                        questionCount: questionCount + 1,
+                        where: `"${whereClause.getField()}" >= ${query}`,
+                        values,
+                        questionCount: questionCount + values.length,
                     };
                 } else {
                     throw new Error(`Unknown WhereBuilder Compare type ${whereClause.getComparison()}`);

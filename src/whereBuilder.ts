@@ -23,6 +23,23 @@ export type NestedWhere = {
     where: WhereBuilder | NestedObject;
 };
 
+export enum WHERE_ARITHMATIC {
+    PLUS='where/plus',
+    MINUS='where/minus',
+    TIMES='where/times',
+    DIVIDE='where/divide',
+};
+
+export type WhereArithmatic = {
+    operator: WHERE_ARITHMATIC,
+    left: WhereArithmaticValue,
+    right: WhereArithmaticValue,
+};
+
+export type WhereArithmaticValue = String | Number | Boolean | WhereArithmatic | null;
+
+export type WhereBuilderValue = WhereArithmaticValue | WhereBuilder | NestedObject | null;
+
 type BuilderFunction = (builder: WhereBuilder) => void;
 
 export class WhereBuilder {
@@ -31,7 +48,7 @@ export class WhereBuilder {
     private comparison: WHERE_COMPARE | null;
     private field: string | null;
     private externalField: string | null;
-    private value: any;
+    private value: WhereBuilderValue;
     private table: string | null;
 
     constructor(type = WHERE_TYPE.AND) {
@@ -62,7 +79,7 @@ export class WhereBuilder {
         return this;
     }
 
-    compare(field: string, compare: WHERE_COMPARE, value: any) {
+    compare(field: string, compare: WHERE_COMPARE, value: WhereArithmaticValue) {
         const child = new WhereBuilder(WHERE_TYPE.COMPARE);
         child.comparison = compare;
         child.field = field;

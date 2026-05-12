@@ -427,7 +427,7 @@ This method adds a comparison on a single field and a value or array of values.
 | -- | -- |
 | field | String | The field name to compare |
 | operator | WHERE_COMPARE | The comparison operator to use |
-| value | Mixed | The value to compare on |
+| value | WhereArithmaticValue | The value to compare on |
 
 *Note* If the operator is `EQ` or `NE`, the `value` can be an array.
 
@@ -468,6 +468,29 @@ WhereBuilder.new()
         builder.compare("field", WHERE_COMPARE.EQ, 5)
             .compare("field2", WHERE_COMPARE.NE, 10)
     });
+
+### Types
+
+#### WhereArithmaticValue
+
+The `WhereArithmaticValue` can be a standard value, like string, numeric, boolean, or null. It can also reference another field in the table by using the pattern `field.field_name`
+
+It can also be an arithmatic value, which is an object containing the following properties:
+
+| Property | Type | Description |
+| -- | -- |
+| left | WhereArithmaticValue | The left value for the expression |
+| operator | WHERE_ARITHMATIC | The operation to perform |
+| right | WhereArithmaticValue | The right value for the expression |
+
+#### WHERE_ARITHMATIC
+
+| Type |
+| -- |
+| PLUS |
+| MINUS |
+| TIMES |
+| DIVIDE |
 
 ## MigrationHandler
 

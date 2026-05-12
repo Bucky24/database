@@ -1,5 +1,5 @@
 import { Field, FIELD_META, FIELD_TYPE, Fields, FieldWithForeign, NestedObject, ORDER, OrderObj, IndexSettings } from "../../types";
-import { WhereBuilder, WHERE_COMPARE, WHERE_TYPE } from "../../whereBuilder";
+import { WhereBuilder, WHERE_COMPARE, WHERE_TYPE, WhereArithmaticValue, WhereArithmatic, WHERE_ARITHMATIC } from "../../whereBuilder";
 import { Connection } from '../common/connection';
 
 export interface MysqlConnectionObject {
@@ -186,7 +186,64 @@ export default class MysqlConnection extends Connection {
         return sql;
     }
 
-    static _getEquality(key: string | null, value: any, negated = false) {
+    static _generateWhereArithmatic(value: WhereArithmaticValue): { query: string, values: any[] } {
+        if (typeof value === "string") {
+            if (value.startsWith("field.")) {
+                const [_, field] = value.split("field.");
+                return {
+                    query: field,
+                    values: [],
+                };
+            }
+
+            return {
+                query: "?",
+                values: [`"${value}"`],
+            };
+        }
+        
+        if (typeof value === "number" || value === null || typeof value === "boolean") {
+            return {
+                query: "?",
+                values: [value],
+            };
+        }
+
+        const valueAsObj = value as Object;
+
+        if (valueAsObj.hasOwnProperty('operator')) {
+            const arithmatic = valueAsObj as WhereArithmatic;
+
+            const leftResult = MysqlConnection._generateWhereArithmatic(arithmatic.left);
+            const rightResult = MysqlConnection._generateWhereArithmatic(arithmatic.right);
+
+            const values = [...leftResult.values, ...rightResult.values];
+
+            let operator = '';
+            switch (arithmatic.operator) {
+                case WHERE_ARITHMATIC.DIVIDE:
+                    operator = '/';
+                    break;
+                case WHERE_ARITHMATIC.MINUS:
+                    operator = "-";
+                    break;
+                case WHERE_ARITHMATIC.PLUS:
+                    operator = "+";
+                    break;
+                case WHERE_ARITHMATIC.TIMES:
+                    operator = "*";
+                    break;
+            }
+            return {
+                query: `(${leftResult.query} ${operator} ${rightResult.query})`,
+                values,
+            }
+        }
+
+        throw new Error(`Unexpected object in WhereBuilder that does not conform to WhereArithmatic (${valueAsObj}`);
+    }
+
+    static _getEquality(key: string | null, value: WhereArithmaticValue, negated = false) {
         if (Array.isArray(value)) {
             const values = [];
             const questionList = [];
@@ -202,6 +259,13 @@ export default class MysqlConnection extends Connection {
             return {
                 where: `${key} ${negated ? 'is not' : 'is'} null`,
                 values: [],
+            };
+        } else if (typeof value === "object") {
+            const result = MysqlConnection._generateWhereArithmatic(value);
+
+            return {
+                where: `${key} ${negated ? '!=' : '='} ${result.query}`,
+                values: result.values,
             };
         } else if (value === false) {
             if (negated) {
@@ -232,24 +296,28 @@ export default class MysqlConnection extends Connection {
                 } else if (whereClause.getComparison() === WHERE_COMPARE.NE) {
                     return MysqlConnection._getEquality(whereClause.getField(), whereClause.getValue(), true);
                 } else if (whereClause.getComparison() === WHERE_COMPARE.LT) {
+                    const { query, values } = MysqlConnection._generateWhereArithmatic(whereClause.getValue());
                     return {
-                        where: `${whereClause.getField()} < ?`,
-                        values: [whereClause.getValue()],
+                        where: `${whereClause.getField()} < ${query}`,
+                        values,
                     };
                 } else if (whereClause.getComparison() === WHERE_COMPARE.LTE) {
+                    const { query, values } = MysqlConnection._generateWhereArithmatic(whereClause.getValue());
                     return {
-                        where: `${whereClause.getField()} <= ?`,
-                        values: [whereClause.getValue()],
+                        where: `${whereClause.getField()} <= ${query}`,
+                        values,
                     };
                 } else if (whereClause.getComparison() === WHERE_COMPARE.GT) {
+                    const { query, values } = MysqlConnection._generateWhereArithmatic(whereClause.getValue());
                     return {
-                        where: `${whereClause.getField()} > ?`,
-                        values: [whereClause.getValue()],
+                        where: `${whereClause.getField()} > ${query}`,
+                        values,
                     };
                 } else if (whereClause.getComparison() === WHERE_COMPARE.GTE) {
+                    const { query, values } = MysqlConnection._generateWhereArithmatic(whereClause.getValue());
                     return {
-                        where: `${whereClause.getField()} >= ?`,
-                        values: [whereClause.getValue()],
+                        where: `${whereClause.getField()} >= ${query}`,
+                        values,
                     };
                 } else {
                     throw new Error(`Unknown WhereBuilder Compare type ${whereClause.getComparison()}`);

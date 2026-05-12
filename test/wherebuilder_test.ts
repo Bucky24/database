@@ -2,7 +2,7 @@ import assert from 'assert';
 import { Connection } from '../src/connections/server';
 import { Model } from '../src/model';
 import { FIELD_META, FIELD_TYPE } from '../src/types';
-import { WHERE_COMPARE, WhereBuilder } from '../src/whereBuilder';
+import { WHERE_ARITHMATIC, WHERE_COMPARE, WhereBuilder } from '../src/whereBuilder';
 import { forConnections } from './connection_helper';
 import { setLog } from '../src/logger';
 
@@ -199,6 +199,142 @@ describe('WhereBuilder', async () => {
 
             assert.equal(results.length, 1);
             assert.equal(results[0].id, m2id1);
+        });
+
+        it('should handle fields in comparison', async () => {
+            const model2 = Model.create({
+                table: "table2", 
+                fields: {
+                    field1: {
+                        type: FIELD_TYPE.INT,
+                    },
+                    field2: {
+                        type: FIELD_TYPE.INT,
+                    },
+                },
+            });
+
+            await model2.init();
+
+            await model2.insert({
+                field1: 5,
+                field2: 10,
+            });
+
+            let result = await model2.search(WhereBuilder.new().compare(
+                'field1',
+                WHERE_COMPARE.LT,
+                'field.field2',
+            ));
+
+            assert.equal(result.length, 1);
+        });
+
+        describe('arithmatic', () => {
+            it('should handle a numeric check', async () => {
+                let results = await model.search(WhereBuilder.new().compare('bar', WHERE_COMPARE.LT, {
+                    left: 5,
+                    operator: WHERE_ARITHMATIC.PLUS,
+                    right: 1,
+                }));
+
+                assert.equal(results.length, 1);
+                assert.equal(results[0].id, 1);
+
+                results = await model.search(WhereBuilder.new().compare('bar', WHERE_COMPARE.LT, {
+                    left: 5,
+                    operator: WHERE_ARITHMATIC.PLUS,
+                    right: 6,
+                }));
+
+                assert.equal(results.length, 2);
+                assert.equal(results[0].id, 1);
+                assert.equal(results[1].id, 2);
+
+                results = await model.search(WhereBuilder.new().compare('bar', WHERE_COMPARE.GT, {
+                    left: 5,
+                    operator: WHERE_ARITHMATIC.PLUS,
+                    right: 6,
+                }));
+
+                assert.equal(results.length, 1);
+
+                results = await model.search(WhereBuilder.new().compare('bar', WHERE_COMPARE.EQ, {
+                    left: 5,
+                    operator: WHERE_ARITHMATIC.PLUS,
+                    right: 5,
+                }));
+            });
+
+            it('should handle a field inside an arithmatic', async () => {
+                const model2 = Model.create({
+                    table: "table2", 
+                    fields: {
+                        field1: {
+                            type: FIELD_TYPE.INT,
+                        },
+                        field2: {
+                            type: FIELD_TYPE.INT,
+                        },
+                    },
+                });
+
+                await model2.init();
+
+                await model2.insert({
+                    field1: 5,
+                    field2: 10,
+                });
+
+                const result = await model2.search(WhereBuilder.new().compare(
+                    'field1',
+                    WHERE_COMPARE.EQ,
+                    {
+                        left: 'field.field2',
+                        right: 5,
+                        operator: WHERE_ARITHMATIC.MINUS,
+                    },
+                ));
+
+                assert.equal(result.length, 1);
+            });
+
+            it('should handle two fields inside arithmatic', async () => {
+                const model2 = Model.create({
+                    table: "table2", 
+                    fields: {
+                        field1: {
+                            type: FIELD_TYPE.INT,
+                        },
+                        field2: {
+                            type: FIELD_TYPE.INT,
+                        },
+                        field3: {
+                            type: FIELD_TYPE.INT,
+                        },
+                    },
+                });
+
+                await model2.init();
+
+                await model2.insert({
+                    field1: 5,
+                    field2: 10,
+                    field3: 15,
+                });
+
+                const result = await model2.search(WhereBuilder.new().compare(
+                    'field3',
+                    WHERE_COMPARE.EQ,
+                    {
+                        left: 'field.field1',
+                        right: 'field.field2',
+                        operator: WHERE_ARITHMATIC.PLUS,
+                    },
+                ));
+
+                assert.equal(result.length, 1);
+            });
         });
     });
 });
