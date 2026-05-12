@@ -54,22 +54,25 @@ export default class FileConnection extends Connection {
 
         // let's see if we added any fields
         const tableData = this._readCacheFile(tableName);
-        const oldFields = tableData.fields || {};
-        const newFieldNames = difference<string>(Object.keys(fields), Object.keys(oldFields));
+        const oldFields = tableData.fields;
+        // if there are no old fields, then pointless to even check this
+        if (oldFields) {
+            const newFieldNames = difference<string>(Object.keys(fields), Object.keys(oldFields));
 
-        for (const newFieldName of newFieldNames) {
-            const newFieldData = fields[newFieldName];
-            // we need to handle if there are existing rows
-            if (tableData.data.length > 0) {
-                // in this case, if our field is required, and there's no default that's an error
-                if (newFieldData.meta?.includes(FIELD_META.REQUIRED) && newFieldData.default === undefined) {
-                    throw new Error(`Table ${tableName} field ${newFieldName} is required but provides no default. Unable to update existing rows`);
-                }
+            for (const newFieldName of newFieldNames) {
+                const newFieldData = fields[newFieldName];
+                // we need to handle if there are existing rows
+                if (tableData.data.length > 0) {
+                    // in this case, if our field is required, and there's no default that's an error
+                    if (newFieldData.meta?.includes(FIELD_META.REQUIRED) && newFieldData.default === undefined) {
+                        throw new Error(`Table ${tableName} field ${newFieldName} is required but provides no default. Unable to update existing rows`);
+                    }
 
-                // if we got here, we just need to update the rows in case of a default
-                if (newFieldData.default !== undefined) {
-                    for (const row of tableData.data) {
-                        row[newFieldName] = newFieldData.default;
+                    // if we got here, we just need to update the rows in case of a default
+                    if (newFieldData.default !== undefined) {
+                        for (const row of tableData.data) {
+                            row[newFieldName] = newFieldData.default;
+                        }
                     }
                 }
             }
