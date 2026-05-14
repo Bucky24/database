@@ -165,7 +165,7 @@ export default class PostgresConnection extends Connection {
             if (value.startsWith("field.")) {
                 const [_, field] = value.split("field.");
                 return {
-                    query: field,
+                    query: `"${field}"`,
                     values: [],
                 };
             }

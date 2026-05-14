@@ -286,13 +286,23 @@ describe('WhereBuilder', async () => {
                     field2: 10,
                 });
 
-                const result = await model2.search(WhereBuilder.new().compare(
+                let result = await model2.search(WhereBuilder.new().compare(
                     'field1',
                     WHERE_COMPARE.EQ,
                     {
                         left: 'field.field2',
                         right: 5,
                         operator: WHERE_ARITHMATIC.MINUS,
+                    },
+                ));
+
+                result = await model2.search(WhereBuilder.new().compare(
+                    'field2',
+                    WHERE_COMPARE.EQ,
+                    {
+                        left: 5, 
+                        right: 'field.field1',
+                        operator: WHERE_ARITHMATIC.PLUS,
                     },
                 ));
 
