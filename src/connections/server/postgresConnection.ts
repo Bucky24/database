@@ -545,8 +545,6 @@ export default class PostgresConnection extends Connection {
             values.push(offset.toString());
         }
 
-        console.log(query);
-
         const results = await this._query(query, values);
 
         return results.rows;
