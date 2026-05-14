@@ -87,6 +87,8 @@ describe('WhereBuilder', async () => {
             const rows = await model.search(WhereBuilder.new()
                 .and((builder: WhereBuilder) => {
                     builder.compare("bar", WHERE_COMPARE.LT, 15)
+                    .compare("bar", WHERE_COMPARE.GT, 5)
+                    // duplicate is intentional
                     .compare("bar", WHERE_COMPARE.GT, 5);
                 })
             );
@@ -98,6 +100,8 @@ describe('WhereBuilder', async () => {
             const rows = await model.search(WhereBuilder.new()
                 .or((builder) => {
                     builder.compare("bar", WHERE_COMPARE.EQ, 15)
+                    .compare("bar", WHERE_COMPARE.EQ, 5)
+                    // duplicate is intentional
                     .compare("bar", WHERE_COMPARE.EQ, 5);
                 })
             );

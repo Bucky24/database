@@ -339,7 +339,7 @@ export default class PostgresConnection extends Connection {
                     const { values: childValues, where } = PostgresConnection._getWhere(child, questionCount);
                     fieldList.push(`(${where})`);
                     values = [...values,...childValues];
-                    questionCount += values.length;
+                    questionCount += childValues.length;
                 }
 
                 return {
@@ -354,7 +354,7 @@ export default class PostgresConnection extends Connection {
                     const { values: childValues, where } = PostgresConnection._getWhere(child, questionCount);
                     fieldList.push(`(${where})`);
                     values = [...values,...childValues];
-                    questionCount += values.length;
+                    questionCount += childValues.length;
                 }
 
                 return {
@@ -544,6 +544,8 @@ export default class PostgresConnection extends Connection {
             questionCount ++;
             values.push(offset.toString());
         }
+
+        console.log(query);
 
         const results = await this._query(query, values);
 
