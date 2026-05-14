@@ -183,7 +183,7 @@ export default class PostgresConnection extends Connection {
                 if (Math.floor(value) !== value) {
                     type = "double precision";
                 } else {
-                    type = "integer";
+                    type = "bigint";
                 }
             }
 
