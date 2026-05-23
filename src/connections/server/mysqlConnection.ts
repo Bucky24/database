@@ -191,7 +191,7 @@ export default class MysqlConnection extends Connection {
             if (value.startsWith("field.")) {
                 const [_, field] = value.split("field.");
                 return {
-                    query: field,
+                    query: "`" + field + "`",
                     values: [],
                 };
             }
@@ -252,35 +252,35 @@ export default class MysqlConnection extends Connection {
                 values.push(item);
             }
             return {
-                where: `${key} ${negated ? 'not in' : 'in'} (${questionList.join(', ')})`,
+                where: `\`${key}\` ${negated ? 'not in' : 'in'} (${questionList.join(', ')})`,
                 values,
             };
         } else if (value === null) {
             return {
-                where: `${key} ${negated ? 'is not' : 'is'} null`,
+                where: `\`${key}\` ${negated ? 'is not' : 'is'} null`,
                 values: [],
             };
         } else if (typeof value === "object") {
             const result = MysqlConnection._generateWhereArithmatic(value);
 
             return {
-                where: `${key} ${negated ? '!=' : '='} ${result.query}`,
+                where: `\`${key}\` ${negated ? '!=' : '='} ${result.query}`,
                 values: result.values,
             };
         } else if (value === false) {
             if (negated) {
                 return {
-                    where: `(${key} != 0 && ${key} is not null)`,
+                    where: `(\`${key}\` != 0 && \`${key}\` is not null)`,
                     values: [],
                 };
             }
             return {
-                where: `(${key} = 0 || ${key} is null)`,
+                where: `(\`${key}\` = 0 || \`${key}\` is null)`,
                 values: [],
             };
         } else {
             return {
-                where: `${key} ${negated ? '!=' : '='} ?`,
+                where: `\`${key}\` ${negated ? '!=' : '='} ?`,
                 values: [value],
             };
         }
@@ -298,25 +298,25 @@ export default class MysqlConnection extends Connection {
                 } else if (whereClause.getComparison() === WHERE_COMPARE.LT) {
                     const { query, values } = MysqlConnection._generateWhereArithmatic(whereClause.getValue());
                     return {
-                        where: `${whereClause.getField()} < ${query}`,
+                        where: `\`${whereClause.getField()}\` < ${query}`,
                         values,
                     };
                 } else if (whereClause.getComparison() === WHERE_COMPARE.LTE) {
                     const { query, values } = MysqlConnection._generateWhereArithmatic(whereClause.getValue());
                     return {
-                        where: `${whereClause.getField()} <= ${query}`,
+                        where: `\`${whereClause.getField()}\` <= ${query}`,
                         values,
                     };
                 } else if (whereClause.getComparison() === WHERE_COMPARE.GT) {
                     const { query, values } = MysqlConnection._generateWhereArithmatic(whereClause.getValue());
                     return {
-                        where: `${whereClause.getField()} > ${query}`,
+                        where: `\`${whereClause.getField()}\` > ${query}`,
                         values,
                     };
                 } else if (whereClause.getComparison() === WHERE_COMPARE.GTE) {
                     const { query, values } = MysqlConnection._generateWhereArithmatic(whereClause.getValue());
                     return {
-                        where: `${whereClause.getField()} >= ${query}`,
+                        where: `\`${whereClause.getField()}\` >= ${query}`,
                         values,
                     };
                 } else {
@@ -350,7 +350,7 @@ export default class MysqlConnection extends Connection {
                 };
             } else if (whereClause.getType() === WHERE_TYPE.NESTED) {
                 const { where: childWhere, values: childValues } = this._generateWhere(whereClause.getValue() as WhereBuilder | NestedObject);
-                const query = `${whereClause.getField()} in (SELECT ${whereClause.getExternalField()} FROM \`${whereClause.getTable()}\` WHERE ${childWhere})`
+                const query = `\`${whereClause.getField()}\` in (SELECT ${whereClause.getExternalField()} FROM \`${whereClause.getTable()}\` WHERE ${childWhere})`
                 return {
                     where: query,
                     values: childValues,
@@ -496,7 +496,7 @@ export default class MysqlConnection extends Connection {
 
         Object.keys(insertData).forEach((key) => {
             const value = insertData[key];
-            fieldList.push(key);
+            fieldList.push(`\`${key}\``);
             valueList.push(value);
             valueKeys.push("?");
         });
@@ -527,7 +527,7 @@ export default class MysqlConnection extends Connection {
                     directionStr = 'DESC';
                 }
                 // would love to parameterize this but it crashes if I do
-                orderList.push(`${field} ${directionStr}`);
+                orderList.push(`\`${field}\` ${directionStr}`);
                 //values.push(field);
             }
             query += " ORDER BY " + orderList.join(", ");
@@ -572,19 +572,19 @@ export default class MysqlConnection extends Connection {
         const fieldRows: string[] = [];
         const values = [];
         Object.keys(update).forEach((key) => {
-            fieldRows.push(`${key} = ?`);
+            fieldRows.push(`\`${key}\` = ?`);
             values.push(update[key]);
         });
 
         query += fieldRows.join(", ");
-        query += " WHERE id = ?";
+        query += " WHERE `id` = ?";
         values.push(id);
 
         await this._query(query, values);
     }
 
     async delete(tableName: string, id: number) {
-        const query = "DELETE FROM `" + this.getTable(tableName) + "` WHERE id = ?";
+        const query = "DELETE FROM `" + this.getTable(tableName) + "` WHERE `id` = ?";
         await this._query(query, [id]);
     }
 }
