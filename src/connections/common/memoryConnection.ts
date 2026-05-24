@@ -120,58 +120,66 @@ export default class MemoryConnection extends Connection {
     }
 
     async search(tableName: string, whereClause: WhereBuilder | NestedObject, order?: OrderObj, limit?: number, offset?: number): Promise<any[]> {
-        let matching = [];
+        try {
+            let matching = [];
 
-        const startRow = offset || 0;
+            const startRow = offset || 0;
 
-        if (!MemoryConnection.memoryData[tableName]) {
-            throw new Error(`Model ${tableName} has not been intialized`);
-        }
-
-        const data = MemoryConnection.memoryData[tableName];
-        for (let i=startRow;i<data.rows.length;i++) {
-            const obj = data.rows[i];
-            const matches = await doesRowMatchClause(whereClause, obj, async (nested: NestedWhere) => {
-                const rows = await this.search(nested.externalTable, nested.where);
-                return rows.map((row) => {
-                    return row[nested.externalField] ?? null;
-                });
-            });
-
-            if (matches) {
-                matching.push({...obj});
+            if (!MemoryConnection.memoryData[tableName]) {
+                throw new Error(`Model ${tableName} has not been intialized`);
             }
-        }
 
-        if (order) {
-            matching.sort((a, b) => {
-                for (const field in order) {
-                    const direction = order[field];
+            const data = MemoryConnection.memoryData[tableName];
+            for (let i=startRow;i<data.rows.length;i++) {
+                const obj = data.rows[i];
+                const matches = await doesRowMatchClause(whereClause, obj, async (nested: NestedWhere) => {
+                    const rows = await this.search(nested.externalTable, nested.where);
+                    return rows.map((row) => {
+                        return row[nested.externalField] ?? null;
+                    });
+                });
 
-                    if (
-                        (direction === ORDER.ASC && a[field] < b[field]) ||
-                        (direction === ORDER.DESC && a[field] > b[field])
-                    ) {
-                        return -1;
-                    }
-
-                    if (
-                        (direction === ORDER.ASC && a[field] > b[field]) ||
-                        (direction === ORDER.DESC && a[field] < b[field])
-                    ) {
-                        return 1;
-                    }
+                if (matches) {
+                    matching.push({...obj});
                 }
+            }
 
-                return 0;
-            });
+            if (order) {
+                matching.sort((a, b) => {
+                    for (const field in order) {
+                        const direction = order[field];
+
+                        if (
+                            (direction === ORDER.ASC && a[field] < b[field]) ||
+                            (direction === ORDER.DESC && a[field] > b[field])
+                        ) {
+                            return -1;
+                        }
+
+                        if (
+                            (direction === ORDER.ASC && a[field] > b[field]) ||
+                            (direction === ORDER.DESC && a[field] < b[field])
+                        ) {
+                            return 1;
+                        }
+                    }
+
+                    return 0;
+                });
+            }
+
+            if (limit) {
+                matching = matching.slice(0, limit);
+            }
+
+            return matching;
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                throw new Error(`Cannot run search against ${tableName}: ${error.message}. Where clause is ${JSON.stringify(whereClause, null, 4)}`);
+            }
+
+            throw error;
         }
-
-        if (limit) {
-            matching = matching.slice(0, limit);
-        }
-
-        return matching;
     }
 
     async delete(tableName: string, id: number) {
@@ -190,8 +198,16 @@ export default class MemoryConnection extends Connection {
     }
 
     async count(tableName: string, whereClause: WhereBuilder | NestedObject): Promise<number> {
-        const rows = await this.search(tableName, whereClause);
-        return rows.length;
+        try {
+            const rows = await this.search(tableName, whereClause);
+            return rows.length;
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                throw new Error(`Cannot run count against ${tableName}: ${error.message}. Where clause is ${JSON.stringify(whereClause, null, 4)}`);
+            }
+
+            throw error;
+        }
     }
 
     async update(tableName: string, id: number, update: NestedObject, tableFields: Fields): Promise<number> {

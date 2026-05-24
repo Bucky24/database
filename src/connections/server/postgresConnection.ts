@@ -506,62 +506,78 @@ export default class PostgresConnection extends Connection {
     }
 
     async search(tableName: string, whereClause: WhereBuilder | NestedObject, order?: OrderObj, limit?: number, offset?: number) {
-        let query = "SELECT * FROM \"" + tableName + "\"";
+        try {
+            let query = "SELECT * FROM \"" + tableName + "\"";
 
-        let { where, values, questionCount } = PostgresConnection._getWhere(whereClause);
+            let { where, values, questionCount } = PostgresConnection._getWhere(whereClause);
 
-        if (where.length > 0) {
-            query += " WHERE " + where;
-        }
-
-        if (order) {
-            const orderList = [];
-            for (const field in order) {
-                const direction = order[field];
-                let directionStr = '';
-                if (direction === ORDER.ASC) {
-                    directionStr = 'ASC';
-                } else if (direction === ORDER.DESC) {
-                    directionStr = 'DESC';
-                }
-                // would love to parameterize this but it crashes if I do
-                orderList.push(`"${field}" ${directionStr}`);
-                //values.push(field);
+            if (where.length > 0) {
+                query += " WHERE " + where;
             }
-            query += " ORDER BY " + orderList.join(", ");
-        } else {
-            query += " ORDER BY id asc";
+
+            if (order) {
+                const orderList = [];
+                for (const field in order) {
+                    const direction = order[field];
+                    let directionStr = '';
+                    if (direction === ORDER.ASC) {
+                        directionStr = 'ASC';
+                    } else if (direction === ORDER.DESC) {
+                        directionStr = 'DESC';
+                    }
+                    // would love to parameterize this but it crashes if I do
+                    orderList.push(`"${field}" ${directionStr}`);
+                    //values.push(field);
+                }
+                query += " ORDER BY " + orderList.join(", ");
+            } else {
+                query += " ORDER BY id asc";
+            }
+
+            if (limit) {
+                query += " LIMIT $" + (questionCount + 1);
+                questionCount ++;
+                values.push(limit.toString());
+            }
+
+            if (offset) {
+                query += " OFFSET $" + (questionCount + 1);
+                questionCount ++;
+                values.push(offset.toString());
+            }
+
+            const results = await this._query(query, values);
+
+            return results.rows;
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                throw new Error(`Cannot run search against ${tableName}: ${error.message}. Where clause is ${JSON.stringify(whereClause, null, 4)}`);
+            }
+
+            throw error;
         }
-
-        if (limit) {
-            query += " LIMIT $" + (questionCount + 1);
-            questionCount ++;
-            values.push(limit.toString());
-        }
-
-        if (offset) {
-            query += " OFFSET $" + (questionCount + 1);
-            questionCount ++;
-            values.push(offset.toString());
-        }
-
-        const results = await this._query(query, values);
-
-        return results.rows;
     }
 
     async count(tableName: string, whereClause: WhereBuilder | NestedObject) {
-        let query = "SELECT COUNT(*) as \"count\" FROM \"" + tableName + "\"";
+        try {
+            let query = "SELECT COUNT(*) as \"count\" FROM \"" + tableName + "\"";
 
-        let { where, values } = PostgresConnection._getWhere(whereClause);
+            let { where, values } = PostgresConnection._getWhere(whereClause);
 
-        if (where.length > 0) {
-            query += " WHERE " + where;
+            if (where.length > 0) {
+                query += " WHERE " + where;
+            }
+
+            const results = await this._query(query, values);
+
+            return results.rows[0].count;
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                throw new Error(`Cannot run count against ${tableName}: ${error.message}. Where clause is ${JSON.stringify(whereClause, null, 4)}`);
+            }
+
+            throw error;
         }
-
-        const results = await this._query(query, values);
-
-        return results.rows[0].count;
     }
 
     async update(tableName: string, id: number, update: NestedObject) {

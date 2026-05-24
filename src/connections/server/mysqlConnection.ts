@@ -508,62 +508,78 @@ export default class MysqlConnection extends Connection {
     }
 
     async search(tableName: string, whereClause: WhereBuilder | NestedObject, order?: OrderObj, limit?: number, offset?: number): Promise<any[]> {
-        let query = "SELECT * FROM `" + tableName + "`";
+        try {
+            let query = "SELECT * FROM `" + tableName + "`";
 
-        const { where, values } = MysqlConnection._generateWhere(whereClause);
+            const { where, values } = MysqlConnection._generateWhere(whereClause);
 
-        if (where.length > 0) {
-            query += " WHERE " + where;
-        }
+            if (where.length > 0) {
+                query += " WHERE " + where;
+            }
 
-        if (order) {
-            const orderList = [];
-            for (const field in order) {
-                const direction = order[field];
-                let directionStr = '';
-                if (direction === ORDER.ASC) {
-                    directionStr = 'ASC';
-                } else if (direction === ORDER.DESC) {
-                    directionStr = 'DESC';
+            if (order) {
+                const orderList = [];
+                for (const field in order) {
+                    const direction = order[field];
+                    let directionStr = '';
+                    if (direction === ORDER.ASC) {
+                        directionStr = 'ASC';
+                    } else if (direction === ORDER.DESC) {
+                        directionStr = 'DESC';
+                    }
+                    // would love to parameterize this but it crashes if I do
+                    orderList.push(`\`${field}\` ${directionStr}`);
+                    //values.push(field);
                 }
-                // would love to parameterize this but it crashes if I do
-                orderList.push(`\`${field}\` ${directionStr}`);
-                //values.push(field);
+                query += " ORDER BY " + orderList.join(", ");
+            } else {
+                query += " ORDER BY id asc";
             }
-            query += " ORDER BY " + orderList.join(", ");
-        } else {
-            query += " ORDER BY id asc";
-        }
 
-        if (limit) {
-            query += " LIMIT ?";
-            values.push(limit.toString());
-    
-            if (offset) {
-                query += " OFFSET ?";
-                values.push(offset.toString());
+            if (limit) {
+                query += " LIMIT ?";
+                values.push(limit.toString());
+        
+                if (offset) {
+                    query += " OFFSET ?";
+                    values.push(offset.toString());
+                }
+            } else if (offset) {
+                throw new Error("Mysql does not support offset without limit");
             }
-        } else if (offset) {
-            throw new Error("Mysql does not support offset without limit");
+
+            const results = await this._query(query, values);
+
+            return results;
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                throw new Error(`Cannot run search against ${tableName}: ${error.message}. Where clause is ${JSON.stringify(whereClause, null, 4)}`);
+            }
+
+            throw error;
         }
-
-        const results = await this._query(query, values);
-
-        return results;
     }
 
     async count(tableName: string, whereClause: WhereBuilder | NestedObject) {
-        let query = "SELECT COUNT(*) as `count` FROM `" + tableName + "`";
+        try {
+            let query = "SELECT COUNT(*) as `count` FROM `" + tableName + "`";
 
-        const { where, values } = MysqlConnection._generateWhere(whereClause);
+            const { where, values } = MysqlConnection._generateWhere(whereClause);
 
-        if (where.length > 0) {
-            query += " WHERE " + where;
+            if (where.length > 0) {
+                query += " WHERE " + where;
+            }
+
+            const results = await this._query(query, values);
+
+            return results[0].count;
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                throw new Error(`Cannot run count against ${tableName}: ${error.message}. Where clause is ${JSON.stringify(whereClause, null, 4)}`);
+            }
+
+            throw error;
         }
-
-        const results = await this._query(query, values);
-
-        return results[0].count;
     }
 
     async update(tableName: string, id: number, update: NestedObject): Promise<any> {

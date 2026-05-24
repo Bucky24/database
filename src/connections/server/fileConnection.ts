@@ -96,52 +96,60 @@ export default class FileConnection extends Connection {
     }
 
     async search(tableName: string, whereClause: WhereBuilder | NestedObject, order?: OrderObj, limit?: number, offset?: number): Promise<any[]> {
-        let matching = [];
+        try {
+            let matching = [];
 
-        const startRow = offset || 0;
+            const startRow = offset || 0;
 
-        const data = this._readCacheFile(tableName);
-        for (let i=startRow;i<data.data.length;i++) {
-            const obj = data.data[i];
-            const matches = await doesRowMatchClause(whereClause, obj, async (nested: NestedWhere) => {
-                const results = await this.search(nested.externalTable, nested.where);
-                return results.map((row) => row[nested.externalField] ?? null);
-            });
+            const data = this._readCacheFile(tableName);
+            for (let i=startRow;i<data.data.length;i++) {
+                const obj = data.data[i];
+                const matches = await doesRowMatchClause(whereClause, obj, async (nested: NestedWhere) => {
+                    const results = await this.search(nested.externalTable, nested.where);
+                    return results.map((row) => row[nested.externalField] ?? null);
+                });
 
-            if (matches) {
-                matching.push(obj);
-            }
-        }
-
-        if (order) {
-            matching.sort((a, b) => {
-                for (const field in order) {
-                    const direction = order[field];
-
-                    if (
-                        (direction === ORDER.ASC && a[field] < b[field]) ||
-                        (direction === ORDER.DESC && a[field] > b[field])
-                    ) {
-                        return -1;
-                    }
-
-                    if (
-                        (direction === ORDER.ASC && a[field] > b[field]) ||
-                        (direction === ORDER.DESC && a[field] < b[field])
-                    ) {
-                        return 1;
-                    }
+                if (matches) {
+                    matching.push(obj);
                 }
+            }
 
-                return 0;
-            });
+            if (order) {
+                matching.sort((a, b) => {
+                    for (const field in order) {
+                        const direction = order[field];
+
+                        if (
+                            (direction === ORDER.ASC && a[field] < b[field]) ||
+                            (direction === ORDER.DESC && a[field] > b[field])
+                        ) {
+                            return -1;
+                        }
+
+                        if (
+                            (direction === ORDER.ASC && a[field] > b[field]) ||
+                            (direction === ORDER.DESC && a[field] < b[field])
+                        ) {
+                            return 1;
+                        }
+                    }
+
+                    return 0;
+                });
+            }
+
+            if (limit) {
+                matching = matching.slice(0, limit);
+            }
+
+            return matching;
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                throw new Error(`Cannot run search against ${tableName}: ${error.message}. Where clause is ${JSON.stringify(whereClause, null, 4)}`);
+            }
+
+            throw error;
         }
-
-        if (limit) {
-            matching = matching.slice(0, limit);
-        }
-
-        return matching;
     }
 
     async update(tableName: string, id: number, update: NestedObject, tableFields: Fields): Promise<number> {
@@ -256,7 +264,15 @@ export default class FileConnection extends Connection {
     }
 
     async count(tableName: string, whereClause: WhereBuilder | NestedObject): Promise<number> {
-        const rows = await this.search(tableName, whereClause);
-        return rows.length;
+        try {
+            const rows = await this.search(tableName, whereClause);
+            return rows.length;
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                throw new Error(`Cannot run count against ${tableName}: ${error.message}. Where clause is ${JSON.stringify(whereClause, null, 4)}`);
+            }
+
+            throw error;
+        }
     }
 }
