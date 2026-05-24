@@ -465,7 +465,7 @@ export default class PostgresConnection extends Connection {
             const indexName = `${tableName}_${index.name || autoName}_idx`;
             const checkIndexQuery = `SELECT to_regclass($1) as index_name`;
 
-            const indexResult = await this._query(checkIndexQuery, [`public.${indexName}`]);
+            const indexResult = await this._query(checkIndexQuery, [`public."${indexName}"`]);
 
             if (!indexResult.rows[0].index_name) {
                 const fieldsList = index.fields.map(f => `"${f}"`).join(", ");
