@@ -2,13 +2,15 @@ import fs from 'fs';
 import path from 'path';
 import { Connection } from '../common/connection';
 import { NestedWhere, WhereBuilder } from '../../whereBuilder';
-import { FIELD_META, FIELD_TYPE, Fields, IndexSettings, NestedObject, ORDER, OrderObj } from '../../types';
+import { Field, FIELD_META, FIELD_TYPE, Fields, IndexSettings, NestedObject, ORDER, OrderObj } from '../../types';
 import { doesRowMatchClause } from '../common/helpers';
 import { difference } from '../../utils';
 
+type SavableField = Omit<Field, 'foreign'>;
+
 type FileTableData = {
     data: NestedObject[];
-    fields?: Fields;
+    fields?: { [key: string]: SavableField };
     auto: { [field: string]: number };
 }
 
@@ -78,8 +80,22 @@ export default class FileConnection extends Connection {
             }
         }
 
-        tableData.fields = fields;
+        tableData.fields = this._getSavableFields(fields);
         this._writeCacheFile(tableName, tableData);
+    }
+
+    // we cannot push the entire model for foreign models, since that is just terrible in the json
+    private _getSavableFields(fields: Fields): { [key: string]: SavableField } {
+        const processedField: { [key: string]: SavableField } = {};
+        for (const field in fields) {
+            const fieldData = fields[field];
+            processedField[field] = {
+                ...fieldData,
+                foreign: undefined,
+            } as SavableField;
+        }
+
+        return processedField;
     }
 
     private _readCacheFile(tableName: string): FileTableData {
