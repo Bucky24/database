@@ -205,6 +205,69 @@ describe('WhereBuilder', async () => {
             assert.equal(results[0].id, m2id1);
         });
 
+        it.only('should handle a nested table with invert', async () => {
+            const model2 = Model.create({
+                table: "table2", 
+                fields: {
+                    id: {
+                        type: FIELD_TYPE.INT,
+                        meta: [FIELD_META.AUTO]
+                    },
+                    name: {
+                        type: FIELD_TYPE.STRING,
+                    },
+                },
+            });
+
+            await model2.init();
+
+            const model3 = Model.create({
+                table: "table3", 
+                fields: {
+                    tableId: {
+                        type: FIELD_TYPE.INT,
+                        foreign: {
+                            table: model2,
+                            field: 'id'
+                        },
+                    },
+                    email: {
+                        type: FIELD_TYPE.STRING,
+                    },
+                },
+            });
+
+            await model3.init();
+
+            const m2id1 = await model2.insert({
+                name: 'name1',
+            });
+            const m2id2 = await model2.insert({
+                name: 'name2',
+            });
+
+            await model3.insert({
+                tableId: m2id1,
+                email: 'email1',
+            });
+            await model3.insert({
+                tableId: m2id2,
+                email: 'email2',
+            });
+
+            // use model3 to figure out the ids to search in model2
+            const results = await model2.search(WhereBuilder.new().nested({
+                externalTable: model3.getTable(),
+                localField: 'id',
+                externalField: 'tableId',
+                where: WhereBuilder.new().compare('email', WHERE_COMPARE.EQ, "email1"),
+                invert: true,
+            }));
+
+            assert.equal(results.length, 1);
+            assert.equal(results[0].id, m2id2);
+        });
+
         it('should handle fields in comparison', async () => {
             const model2 = Model.create({
                 table: "table2", 

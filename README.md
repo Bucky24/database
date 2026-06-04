@@ -478,7 +478,8 @@ The nested method allows a subquery to be used to generate a given value to be c
 | externalTable | String | The external table for the nested query |
 | localField | String | The field on the local table to compare the results of the subquery against |
 | externalField | String | The field on the external table to return data to compare against |
-where: | WhereBuilder | The search on the external table to filter results |
+| where: | WhereBuilder | The search on the external table to filter results |
+| invert | Boolean | If true, uses a NOT IN clause instead of an IN clause |
 
 ### Types
 

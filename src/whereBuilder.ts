@@ -21,6 +21,7 @@ export type NestedWhere = {
     localField: string;
     externalField: string;
     where: WhereBuilder | NestedObject;
+    invert?: boolean;
 };
 
 export enum WHERE_ARITHMATIC {
@@ -50,6 +51,7 @@ export class WhereBuilder {
     private externalField: string | null;
     private value: WhereBuilderValue;
     private table: string | null;
+    private invert: boolean | undefined;
 
     constructor(type = WHERE_TYPE.AND) {
         this.type = type;
@@ -59,6 +61,7 @@ export class WhereBuilder {
         this.externalField = null;
         this.value = null;
         this.table = null;
+        this.invert = undefined;
     }
 
     static new(): WhereBuilder {
@@ -96,6 +99,7 @@ export class WhereBuilder {
         child.field = data.localField;
         child.externalField = data.externalField;
         child.value = data.where;
+        child.invert = data.invert;
 
         this.children.push(child);
 
