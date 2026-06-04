@@ -350,7 +350,7 @@ export default class MysqlConnection extends Connection {
                 };
             } else if (whereClause.getType() === WHERE_TYPE.NESTED) {
                 const { where: childWhere, values: childValues } = this._generateWhere(whereClause.getValue() as WhereBuilder | NestedObject);
-                const query = `\`${whereClause.getField()}\` in (SELECT ${whereClause.getExternalField()} FROM \`${whereClause.getTable()}\` WHERE ${childWhere})`
+                const query = `\`${whereClause.getField()}\` ${whereClause.getInvert() ? 'not' : ''} in (SELECT ${whereClause.getExternalField()} FROM \`${whereClause.getTable()}\` WHERE ${childWhere})`
                 return {
                     where: query,
                     values: childValues,

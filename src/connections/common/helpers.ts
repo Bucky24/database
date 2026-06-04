@@ -126,6 +126,9 @@ export async function doesRowMatchClause(whereClause: WhereBuilder | NestedObjec
 
             const searchValue = obj[whereClause.getField()];
 
+            if (whereClause.getInvert()) {
+                return !nestedResults.includes(searchValue);
+            }
             return nestedResults.includes(searchValue);
         } else {
             throw new Error(`Unknown WhereBuilder type ${whereClause.getType()}`);

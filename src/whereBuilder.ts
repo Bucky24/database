@@ -153,4 +153,8 @@ export class WhereBuilder {
     getChildren(): WhereBuilder[] {
         return this.children;
     }
+
+    getInvert(): boolean | undefined {
+        return this.invert;
+    }
 }

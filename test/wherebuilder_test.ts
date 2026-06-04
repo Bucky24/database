@@ -205,7 +205,7 @@ describe('WhereBuilder', async () => {
             assert.equal(results[0].id, m2id1);
         });
 
-        it.only('should handle a nested table with invert', async () => {
+        it('should handle a nested table with invert', async () => {
             const model2 = Model.create({
                 table: "table2", 
                 fields: {
