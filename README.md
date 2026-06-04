@@ -424,7 +424,7 @@ WhereBuilder.new()
 This method adds a comparison on a single field and a value or array of values.
 
 | Param | Type | Description |
-| -- | -- |
+| -- | -- | -- |
 | field | String | The field name to compare |
 | operator | WHERE_COMPARE | The comparison operator to use |
 | value | WhereArithmaticValue | The value to compare on |
@@ -444,7 +444,7 @@ This method allows adding an `AND` check into the builder.
 *Note* A `WhereBuilder` acts as an `and` type by default, to allow multiple comparisons (and to mimic the default of passing a normal object into `search`)
 
 | Param | Type | Description |
-| -- | -- |
+| -- | -- | -- |
 | callback | Function | This callback function will be called with a `WhereBuilder` as its first argument.
 
 ```
@@ -468,6 +468,17 @@ WhereBuilder.new()
         builder.compare("field", WHERE_COMPARE.EQ, 5)
             .compare("field2", WHERE_COMPARE.NE, 10)
     });
+
+#### nested
+
+The nested method allows a subquery to be used to generate a given value to be compared against a field on the main table (using an IN clause)
+
+| Param | Type | Description |
+| -- | -- | -- |
+| externalTable | String | The external table for the nested query |
+| localField | String | The field on the local table to compare the results of the subquery against |
+| externalField | String | The field on the external table to return data to compare against |
+where: | WhereBuilder | The search on the external table to filter results |
 
 ### Types
 
