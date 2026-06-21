@@ -50,7 +50,7 @@ interface RouteOptions {
     middleware?: Middleware | Middleware[];
 }
 
-export class Model {
+export class Model<T> {
     private table: string;
     private fields: Fields;
     private fieldList: FieldWithId[];
@@ -70,10 +70,10 @@ export class Model {
         this.indexes = settings.indexes || [];
     }
 
-    static create(settings: ModelSettings) {
+    static create<T=any>(settings: ModelSettings): Model<T > {
         try {
             const { table, fields } = modelSchema.validateSync(settings);
-            const model = new Model({
+            const model = new Model<T>({
                 table,
                 fields: {
                     id: {
@@ -319,7 +319,7 @@ export class Model {
         return value;
     }
     
-    async get(id: number | string) {
+    async get(id: number | string): Promise<T | null> {
         const connection = getDefaultConnection();
         
         if (connection === null) {
@@ -337,7 +337,7 @@ export class Model {
         return result[0];
     }
     
-    async search(queryData: WhereBuilder | NestedObject = {}, order?: OrderObj | null, limit?: number, offset?: number) {
+    async search(queryData: WhereBuilder | NestedObject = {}, order?: OrderObj | null, limit?: number, offset?: number): Promise<T[]> {
         const connection = getDefaultConnection();
         
         if (connection === null) {
@@ -368,7 +368,7 @@ export class Model {
         });
     }
 
-    async count(queryData = {}) {
+    async count(queryData = {}): Promise<number> {
         const connection = getDefaultConnection();
         
         if (connection === null) {
@@ -389,7 +389,7 @@ export class Model {
         return result;
     }
     
-    async update(id: number | string, fields: NestedObject) {
+    async update(id: number | string, fields: NestedObject): Promise<T> {
         const connection = getDefaultConnection();
         
         if (connection === null) {

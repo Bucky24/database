@@ -687,7 +687,7 @@ describe('model', async () => {
         });
         
         describe('update', () => {
-            let model: Model;
+            let model: Model<any>;
 
             beforeEach(async () => {
                 model = Model.create({
@@ -807,12 +807,16 @@ describe('model', async () => {
         });
         
         describe('delete', () => {
-            let model: Model;
+            type TableType = {
+                foo: string;
+                bar?: string;
+            };
+            let model: Model<TableType>;
             let id1: number;
             let id2: number;
 
             beforeEach(async () => {
-                model = Model.create({
+                model = Model.create<TableType>({
                     table: "table",
                     fields: {
                         foo: {

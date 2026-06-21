@@ -151,6 +151,12 @@ Allows creating a new Model for use in your program. It's recommended that you c
 
 Note that the Model will automatically add an "id" field with type of FIELD_TYPE.INT that is a required auto-increment field. You can override this field if you desire.
 
+This method takes an optional generic-if given, this will correctly type all the methods. If included, the type should include the `id` field, it is not added automatically.
+
+```
+const model = Model.create<MyType>(...);
+```
+
 Also note that you must call `init` on the new Model and wait for it to finish before you can use the model. This ensures that all tables exist in the chosen data system.
 
 #### Field
